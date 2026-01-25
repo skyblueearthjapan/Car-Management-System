@@ -1,0 +1,60 @@
+<!-- Ui.html -->
+<!doctype html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('UiCss'); ?>
+  </head>
+  <body class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">LINE WORKS</div>
+        <div class="subtitle">車両予約</div>
+      </div>
+
+      <nav class="weekTabs" aria-label="週タブ" id="weekTabs"></nav>
+
+      <div class="topActions">
+        <div class="saveState is-saved" id="saveState">保存済み</div>
+        <div class="navBtns">
+          <button class="btn" id="btnPrev">前日</button>
+          <button class="btn btn--primary" id="btnToday">今日</button>
+          <button class="btn" id="btnNext">翌日</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="canvas">
+      <section class="owned">
+        <div class="dateTitle">
+          <div class="dateTitle__main" id="dateTitleMain">—</div>
+          <div class="dateTitle__sub">AM 08:00–13:00 / PM 13:00–18:00</div>
+        </div>
+
+        <div class="grid" id="ownedGrid"></div>
+      </section>
+
+      <aside class="borrowPanel" id="borrowPanel">
+        <div class="borrowPanel__title">たまに借りる車</div>
+        <div class="borrowPanel__grid" id="borrowGrid"></div>
+      </aside>
+    </main>
+
+    <!-- Toast -->
+    <div class="toastHost" id="toastHost" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Modal -->
+    <div class="modalOverlay is-hidden" id="modalOverlay" role="dialog" aria-modal="true" aria-label="モーダル">
+      <div class="modal">
+        <div class="modal__head">
+          <div class="modal__title" id="modalTitle">—</div>
+          <button class="iconBtn" id="modalClose" aria-label="閉じる">✕</button>
+        </div>
+        <div class="modal__body" id="modalBody"></div>
+        <div class="modal__foot" id="modalFoot"></div>
+      </div>
+    </div>
+
+    <?!= include('UiJs'); ?>
+  </body>
+</html>

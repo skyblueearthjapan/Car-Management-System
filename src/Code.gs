@@ -1,37 +1,105 @@
-/**
- * 車両管理予約システム - メインエントリポイント
- * Code.gs
- */
+/** Code.gs */
 
-/**
- * WebアプリのGETリクエストハンドラ
- * @param {Object} e - イベントオブジェクト
- * @return {HtmlOutput} HTMLページ
- */
-function doGet(e) {
-  const template = HtmlService.createTemplateFromFile('Index');
-
-  return template.evaluate()
-    .setTitle('車両管理予約システム')
+function doGet() {
+  // UIは後で実装。まずは最低限。
+  const t = HtmlService.createTemplateFromFile('Ui');
+  return t.evaluate()
+    .setTitle('車両予約')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-/**
- * HTMLファイルをインクルードする
- * @param {string} filename - ファイル名（拡張子なし）
- * @return {string} HTMLコンテンツ
- */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-/**
- * デプロイURL取得（デバッグ用）
- * @return {string} URL
- */
-function getDeployedUrl() {
-  return ScriptApp.getService().getUrl();
+/** API: 初期データ */
+function getInit(dateISO) {
+  dateISO = dateISO || toISODate_(new Date());
+  const vehicles = getActiveVehicles_();
+  const dayReservations = getDayReservationsJoined_(dateISO);
+  const deptList = readAllObjects_(CONFIG.SHEETS.DEPT).slice(0).map(r => r['部署'] || r['dept_name'] || r['name']).filter(Boolean);
+
+  return ok({ date: dateISO, vehicles, dayReservations, deptList });
+}
+
+/** API: 指定日の予約 */
+function getDay(dateISO) {
+  if (!dateISO) return fail('BAD_REQUEST', 'dateISO is required');
+  const dayReservations = getDayReservationsJoined_(dateISO);
+  return ok({ date: dateISO, dayReservations });
+}
+
+/** API: 部署で作業員絞り込み */
+function getWorkersByDept(deptName) {
+  if (!deptName) return fail('BAD_REQUEST', 'deptName is required');
+  const workers = readAllObjects_(CONFIG.SHEETS.WORKER);
+
+  // 列名ゆらぎ吸収（テンプレに合わせて必要に応じて調整）
+  const out = workers
+    .filter(w => {
+      const wDept = String(w['部署'] || w['dept'] || w['dept_name'] || '');
+      return wDept === String(deptName);
+    })
+    .filter(w => {
+      // is_active チェック (1, '1', true, 'TRUE' を許容)
+      const active = w['is_active'];
+      if (active === undefined || active === '') return true; // 列が無い場合はOK
+      return active === 1 || active === '1' || active === true || String(active).toUpperCase() === 'TRUE';
+    })
+    .map(w => ({
+      worker_code: w['作業員コード'] || w['worker_code'] || '',
+      worker_name: w['氏名'] || w['worker_name'] || w['name'] || '',
+      dept_name: deptName,
+      role: w['担当業務'] || w['role'] || '',
+    }))
+    .filter(w => w.worker_code && w.worker_name);
+
+  return ok({ deptName, workers: out });
+}
+
+/** API: 予約作成（排他＋競合チェック） */
+function createReservation(payload) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    return createReservationCore_(payload);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** API: 予約取消（排他） */
+function cancelReservation(reservationId) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    return cancelReservationCore_(reservationId);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** API: マスタ同期（排他） */
+function syncMasters() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    return syncMastersCore_();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** API: キュー処理（排他） */
+function processQueue(batchSize) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    return processQueueCore_(batchSize);
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // ===========================================
@@ -39,26 +107,14 @@ function getDeployedUrl() {
 // ===========================================
 
 /**
- * スクリプトプロパティにDBスプレッドシートIDを設定
- * ※初回セットアップ時に手動実行
- * @param {string} spreadsheetId - スプレッドシートID
- */
-function setDbSpreadsheetId(spreadsheetId) {
-  PropertiesService.getScriptProperties().setProperty('DB_SPREADSHEET_ID', spreadsheetId);
-  console.log('DB_SPREADSHEET_ID を設定しました: ' + spreadsheetId);
-}
-
-/**
  * 現在の設定を確認
  */
 function checkSetup() {
-  const props = PropertiesService.getScriptProperties().getProperties();
-  console.log('スクリプトプロパティ:');
-  console.log(JSON.stringify(props, null, 2));
+  console.log('CONFIG.DB_SPREADSHEET_ID: ' + CONFIG.DB_SPREADSHEET_ID);
 
   // DBスプレッドシートの接続確認
   try {
-    const ss = getDbSpreadsheet_();
+    const ss = db_();
     console.log('DBスプレッドシート接続OK: ' + ss.getName());
 
     // シート一覧
