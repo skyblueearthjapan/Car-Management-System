@@ -312,16 +312,17 @@ function checkSyncStatus() {
       return;
     }
 
-    // 最新の同期結果を表示
+    // 最新の同期結果を表示（ヘッダー行を除く）
     const lastRow = data[data.length - 1];
     console.log('最新の同期結果:');
-    console.log(`  実行ID: ${lastRow[SYNC_LOG_COLS.RUN_ID]}`);
-    console.log(`  開始時刻: ${lastRow[SYNC_LOG_COLS.START_TIME]}`);
-    console.log(`  終了時刻: ${lastRow[SYNC_LOG_COLS.END_TIME]}`);
-    console.log(`  ステータス: ${lastRow[SYNC_LOG_COLS.STATUS]}`);
-    console.log(`  部署件数: ${lastRow[SYNC_LOG_COLS.DEPT_COUNT]}`);
-    console.log(`  作業員件数: ${lastRow[SYNC_LOG_COLS.WORKER_COUNT]}`);
-    console.log(`  処理時間: ${lastRow[SYNC_LOG_COLS.DURATION]}秒`);
+    console.log(`  実行ID: ${lastRow[0]}`);
+    console.log(`  開始時刻: ${lastRow[1]}`);
+    console.log(`  終了時刻: ${lastRow[2]}`);
+    console.log(`  ステータス: ${lastRow[3]}`);
+    console.log(`  メッセージ: ${lastRow[4]}`);
+    console.log(`  部署件数: ${lastRow[5]}`);
+    console.log(`  作業員件数: ${lastRow[6]}`);
+    console.log(`  処理時間: ${lastRow[7]}秒`);
 
   } catch (e) {
     console.error(`同期状態確認エラー: ${e.message}`);
@@ -339,7 +340,8 @@ function listSyncHistory() {
     console.log('同期履歴:');
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      console.log(`${row[SYNC_LOG_COLS.RUN_ID]} | ${row[SYNC_LOG_COLS.STATUS]} | 部署:${row[SYNC_LOG_COLS.DEPT_COUNT]}件 作業員:${row[SYNC_LOG_COLS.WORKER_COUNT]}件 | ${row[SYNC_LOG_COLS.DURATION]}秒`);
+      // run_id | status | dept_count | worker_count | duration
+      console.log(`${row[0]} | ${row[3]} | 部署:${row[5]}件 作業員:${row[6]}件 | ${row[7]}秒`);
     }
 
   } catch (e) {

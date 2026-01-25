@@ -109,41 +109,44 @@ const RESERVATION_DAY_COLS = {
 
 /**
  * DeptMaster列インデックス
+ * 実際のシート構造: dept_name | display_order | is_active | created_at | updated_at
  */
 const DEPT_COLS = {
   DEPT_NAME: 0,
-  ACTIVE: 1,
-  DISPLAY_ORDER: 2,
-  NOTES: 3,
-  SYNCED_AT: 4
+  DISPLAY_ORDER: 1,
+  ACTIVE: 2,
+  CREATED_AT: 3,
+  UPDATED_AT: 4
 };
 
 /**
  * WorkerMaster列インデックス
+ * 実際のシート構造: worker_code | worker_name | dept_name | display_order | is_active | created_at | updated_at
  */
 const WORKER_COLS = {
   WORKER_CODE: 0,
   WORKER_NAME: 1,
   DEPT_NAME: 2,
-  JOB: 3,
+  DISPLAY_ORDER: 3,
   ACTIVE: 4,
-  SYNCED_AT: 5,
-  NOTES: 6
+  CREATED_AT: 5,
+  UPDATED_AT: 6
 };
 
 /**
  * SyncLog列インデックス
+ * 実際の構造: run_id | start_time | end_time | status | message | dept_count | worker_count | duration | notes
  */
 const SYNC_LOG_COLS = {
   RUN_ID: 0,
-  RUN_AT: 1,
-  STATUS: 2,
-  DEPT_ROWS: 3,
-  WORKER_ROWS: 4,
-  DURATION_MS: 5,
-  ERROR_MESSAGE: 6,
-  TRIGGERED_BY: 7,
-  SOURCE_SPREADSHEET_ID: 8
+  START_TIME: 1,
+  END_TIME: 2,
+  STATUS: 3,
+  MESSAGE: 4,
+  DEPT_COUNT: 5,
+  WORKER_COUNT: 6,
+  DURATION: 7,
+  NOTES: 8
 };
 
 // ===========================================

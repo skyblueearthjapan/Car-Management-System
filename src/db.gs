@@ -407,7 +407,12 @@ function getDepts() {
   const depts = [];
 
   for (const row of data) {
-    if (row[DEPT_COLS.ACTIVE] === true || row[DEPT_COLS.ACTIVE] === 'TRUE') {
+    // is_active: 1, '1', true, 'TRUE' のいずれかでアクティブ
+    const isActive = row[DEPT_COLS.ACTIVE] === 1 ||
+                     row[DEPT_COLS.ACTIVE] === '1' ||
+                     row[DEPT_COLS.ACTIVE] === true ||
+                     row[DEPT_COLS.ACTIVE] === 'TRUE';
+    if (isActive) {
       depts.push({
         dept_name: row[DEPT_COLS.DEPT_NAME],
         display_order: row[DEPT_COLS.DISPLAY_ORDER] || 999
@@ -431,21 +436,25 @@ function getWorkersByDept(deptName) {
   const workers = [];
 
   for (const row of data) {
-    const isActive = row[WORKER_COLS.ACTIVE] === true || row[WORKER_COLS.ACTIVE] === 'TRUE';
+    // is_active: 1, '1', true, 'TRUE' のいずれかでアクティブ
+    const isActive = row[WORKER_COLS.ACTIVE] === 1 ||
+                     row[WORKER_COLS.ACTIVE] === '1' ||
+                     row[WORKER_COLS.ACTIVE] === true ||
+                     row[WORKER_COLS.ACTIVE] === 'TRUE';
     const matchesDept = row[WORKER_COLS.DEPT_NAME] === deptName;
 
     if (isActive && matchesDept) {
       workers.push({
-        worker_code: row[WORKER_COLS.WORKER_CODE],
+        worker_code: String(row[WORKER_COLS.WORKER_CODE]),
         worker_name: row[WORKER_COLS.WORKER_NAME],
         dept_name: row[WORKER_COLS.DEPT_NAME],
-        job: row[WORKER_COLS.JOB] || ''
+        display_order: row[WORKER_COLS.DISPLAY_ORDER] || 999
       });
     }
   }
 
-  // 名前順でソート
-  workers.sort((a, b) => a.worker_name.localeCompare(b.worker_name, 'ja'));
+  // 表示順でソート
+  workers.sort((a, b) => (a.display_order || 999) - (b.display_order || 999));
 
   return workers;
 }
