@@ -128,39 +128,106 @@ G: notes
 
 ## 6. IntegrationQueue（外部連携キュー）
 
-外部システム（生産管理など）からの予約連携用キュー。
+生産管理など外部システムからの予約投入を安全に処理するためのキュー（任意）。直接Reservationsへ書き込まず、サーバ側で競合チェックして反映する。
 
-### 列順序
+### 列順序（A〜Q）
 
 ```
 A: queue_id
 B: enqueued_at
 C: source_system
 D: source_id
-E: payload_json
-F: status
-G: processed_at
-H: reservation_id
-I: error_message
-J: retry_count
+E: vehicle_id
+F: start_datetime
+G: end_datetime
+H: slot_hint
+I: dept_name
+J: worker_code
+K: worker_name
+L: payload_json
+M: status            (pending/processing/success/failure)
+N: processed_at
+O: reservation_id
+P: error_message
+Q: retry_count
 ```
+
+### サンプルデータ
+
+| status | retry_count |
+|--------|-------------|
+| pending | 0 |
 
 ---
 
 ## 7. SyncLog（同期ログ）
 
-マスタ同期の実行ログ。
+マスタ同期の実行履歴。監査・トラブルシュート用。
 
-### 列順序
+### 列順序（A〜I）
 
 ```
 A: run_id
 B: run_at
-C: status
+C: status            (success/failure)
 D: dept_rows
 E: worker_rows
-F: error_message
+F: duration_ms
+G: error_message
+H: triggered_by      (time_trigger/manual)
+I: source_spreadsheet_id
 ```
+
+### サンプルデータ
+
+| run_id | status | triggered_by | source_spreadsheet_id |
+|--------|--------|--------------|----------------------|
+| SYNC-0001 | success | time_trigger | 1iu5HoaknlW1W1HheeYv0jqcRq-aY0SyEE2seQd2pHkQ |
+
+---
+
+## 8. Lists（選択肢リスト）
+
+データ検証用の選択肢（アプリ・DBで共通利用）。原則編集しない。
+
+### 定義済みリスト
+
+**vehicle_category（列A-B）**
+| value |
+|-------|
+| owned |
+| borrowable |
+
+**reservation_status（列C-D）**
+| value |
+|-------|
+| active |
+| cancelled |
+
+**slot（列E-F）**
+| value |
+|-------|
+| AM |
+| PM |
+| FULL |
+
+**source_system（列G-H）**
+| value |
+|-------|
+| webapp |
+| seisan |
+| van |
+| kei_truck |
+| suv |
+| other |
+
+**queue_status（列I-J）**
+| value |
+|-------|
+| pending |
+| processing |
+| success |
+| failure |
 
 ---
 

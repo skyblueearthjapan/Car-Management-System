@@ -125,18 +125,25 @@
 
 ## 6. SyncLog（同期ログ）
 
+マスタ同期の実行履歴。監査・トラブルシュート用。
+
 | column | required | type | description |
 |--------|----------|------|-------------|
-| run_id | Y | string | 同期実行ID。 |
+| run_id | Y | string | 同期実行ID（例：SYNC-0001）。 |
 | run_at | Y | datetime | 同期実行日時。 |
 | status | Y | enum | `success` / `failure`。 |
 | dept_rows | N | number | 同期した部署件数。 |
 | worker_rows | N | number | 同期した作業員件数。 |
+| duration_ms | N | number | 処理時間（ミリ秒）。 |
 | error_message | N | string | 失敗時エラー。 |
+| triggered_by | N | string | トリガー種別（`time_trigger` / `manual`）。 |
+| source_spreadsheet_id | N | string | 同期元スプレッドシートID。 |
 
 ---
 
 ## 7. IntegrationQueue（外部連携キュー）
+
+生産管理など外部システムからの予約投入を安全に処理するためのキュー（任意）。直接Reservationsへ書き込まず、サーバ側で競合チェックして反映する。
 
 | column | required | type | description |
 |--------|----------|------|-------------|
@@ -144,7 +151,14 @@
 | enqueued_at | Y | datetime | 投入日時。 |
 | source_system | Y | enum | 連携元（`seisan` 等）。 |
 | source_id | Y | string | 連携元ユニークID。 |
-| payload_json | Y | string | 連携ペイロード（JSON文字列）。 |
+| vehicle_id | Y | string | 対象車両ID。 |
+| start_datetime | Y | datetime | 開始日時。 |
+| end_datetime | Y | datetime | 終了日時。 |
+| slot_hint | N | enum | スロットヒント（`AM` / `PM` / `FULL`）。 |
+| dept_name | Y | string | 部署名。 |
+| worker_code | Y | string | 作業員コード。 |
+| worker_name | Y | string | 作業員名。 |
+| payload_json | N | string | 連携ペイロード（JSON文字列）。 |
 | status | Y | enum | `pending` / `processing` / `success` / `failure`。 |
 | processed_at | N | datetime | 処理完了日時。 |
 | reservation_id | N | string | 作成/更新した予約ID（成功時）。 |
