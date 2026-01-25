@@ -103,12 +103,23 @@
 
 ## 5. WorkerMaster（作業員マスタ - 同期）
 
+同期元：LW／作業日報_全従業員用 の「作業員マスタ」。部署で絞り込み→氏名選択に使用。
+
 | column | required | type | description |
 |--------|----------|------|-------------|
 | worker_code | Y | string | 作業員コード（同期）。 |
 | worker_name | Y | string | 氏名（同期）。 |
 | dept_name | Y | string | 所属部署（同期）。UIで絞り込みに使用。 |
 | job | N | string | 担当業務（同期元に合わせる）。 |
+| active | Y | bool | 有効フラグ。TRUEのみ表示。 |
+| synced_at | N | datetime | 同期日時。 |
+| notes | N | string | 備考（任意）。 |
+
+### サンプルデータ
+
+| worker_code | worker_name | dept_name | job | active |
+|-------------|-------------|-----------|-----|--------|
+| 1001 | (例) 田村 修二 | (例) 機械設計 | (任意) | TRUE |
 
 ---
 
