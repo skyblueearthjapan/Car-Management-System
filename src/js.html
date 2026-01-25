@@ -1,0 +1,836 @@
+<script>
+/**
+ * 車両管理予約システム - フロントエンドJavaScript
+ * js.html
+ */
+
+// ===========================================
+// 状態管理
+// ===========================================
+const AppState = {
+  currentDate: null,        // 現在表示中の日付（YYYY-MM-DD）
+  weekDates: [],            // 週の日付配列
+  vehicles: [],             // 車両一覧
+  reservations: [],         // 当日の予約一覧
+  depts: [],                // 部署一覧
+  slots: [],                // スロット定義
+  selectedSlot: null,       // 選択中のスロット
+  currentReservationId: null // 詳細表示中の予約ID
+};
+
+// ===========================================
+// 初期化
+// ===========================================
+document.addEventListener('DOMContentLoaded', function() {
+  initApp();
+});
+
+/**
+ * アプリケーション初期化
+ */
+function initApp() {
+  showLoading();
+
+  google.script.run
+    .withSuccessHandler(handleInitSuccess)
+    .withFailureHandler(handleError)
+    .getInit();
+
+  // イベントリスナー設定
+  setupEventListeners();
+}
+
+/**
+ * 初期化成功時の処理
+ * @param {Object} response - APIレスポンス
+ */
+function handleInitSuccess(response) {
+  if (response.code !== 'SUCCESS') {
+    showError(response.message || '初期化に失敗しました');
+    hideLoading();
+    return;
+  }
+
+  const data = response.data;
+
+  // 状態を更新
+  AppState.currentDate = data.currentDate;
+  AppState.weekDates = data.weekDates;
+  AppState.vehicles = data.vehicles;
+  AppState.reservations = data.reservations;
+  AppState.depts = data.depts;
+  AppState.slots = data.slots;
+
+  // UIを更新
+  renderWeekTabs();
+  renderCurrentDate();
+  renderVehicles();
+  populateDepts();
+
+  hideLoading();
+}
+
+// ===========================================
+// イベントリスナー設定
+// ===========================================
+function setupEventListeners() {
+  // ナビゲーションボタン
+  document.getElementById('btnPrevDay').addEventListener('click', goToPrevDay);
+  document.getElementById('btnToday').addEventListener('click', goToToday);
+  document.getElementById('btnNextDay').addEventListener('click', goToNextDay);
+
+  // 予約モーダル
+  document.getElementById('modalClose').addEventListener('click', closeReservationModal);
+  document.getElementById('btnModalCancel').addEventListener('click', closeReservationModal);
+  document.getElementById('btnModalSubmit').addEventListener('click', submitReservation);
+
+  // スロットボタン
+  document.querySelectorAll('.slot-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      selectSlot(this.dataset.slot);
+    });
+  });
+
+  // 部署選択
+  document.getElementById('formDept').addEventListener('change', handleDeptChange);
+
+  // 詳細モーダル
+  document.getElementById('detailModalClose').addEventListener('click', closeDetailModal);
+  document.getElementById('btnDetailClose').addEventListener('click', closeDetailModal);
+  document.getElementById('btnDetailCancel').addEventListener('click', confirmCancelReservation);
+
+  // 確認モーダル
+  document.getElementById('btnConfirmNo').addEventListener('click', closeConfirmModal);
+  document.getElementById('btnConfirmYes').addEventListener('click', executeCancelReservation);
+
+  // モーダルオーバーレイクリックで閉じる
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeAllModals();
+      }
+    });
+  });
+
+  // 日付入力の変更監視
+  document.getElementById('formStartDate').addEventListener('change', validateDateRange);
+  document.getElementById('formEndDate').addEventListener('change', validateDateRange);
+}
+
+// ===========================================
+// 週タブ
+// ===========================================
+function renderWeekTabs() {
+  const container = document.getElementById('weekTabs');
+  container.innerHTML = '';
+
+  const today = formatDateForDisplay(new Date());
+
+  AppState.weekDates.forEach(dateInfo => {
+    const tab = document.createElement('button');
+    tab.className = 'week-tab';
+    tab.dataset.date = dateInfo.date;
+
+    const dateParts = dateInfo.date.split('-');
+    const dayNum = parseInt(dateParts[2]);
+
+    // 曜日によるクラス付与
+    if (dateInfo.dayOfWeek === '日') {
+      tab.classList.add('sunday');
+    } else if (dateInfo.dayOfWeek === '土') {
+      tab.classList.add('saturday');
+    }
+
+    // 今日の場合
+    if (dateInfo.date === today) {
+      tab.classList.add('today');
+    }
+
+    // 選択中の場合
+    if (dateInfo.date === AppState.currentDate) {
+      tab.classList.add('active');
+    }
+
+    tab.innerHTML = `
+      <span class="tab-date">${dayNum}</span>
+      <span class="tab-day">${dateInfo.dayOfWeek}</span>
+    `;
+
+    tab.addEventListener('click', function() {
+      changeDate(this.dataset.date);
+    });
+
+    container.appendChild(tab);
+  });
+}
+
+/**
+ * 日付を変更
+ * @param {string} dateStr - YYYY-MM-DD
+ */
+function changeDate(dateStr) {
+  if (dateStr === AppState.currentDate) return;
+
+  showLoading();
+  AppState.currentDate = dateStr;
+
+  // タブのアクティブ状態を更新
+  document.querySelectorAll('.week-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.date === dateStr);
+  });
+
+  // 新しい週の場合は週データも取得
+  const isInCurrentWeek = AppState.weekDates.some(d => d.date === dateStr);
+
+  if (isInCurrentWeek) {
+    // 同じ週内の日付変更
+    google.script.run
+      .withSuccessHandler(handleDayChangeSuccess)
+      .withFailureHandler(handleError)
+      .getDay(dateStr);
+  } else {
+    // 別の週への移動
+    google.script.run
+      .withSuccessHandler(handleInitSuccess)
+      .withFailureHandler(handleError)
+      .getInit(dateStr);
+  }
+}
+
+/**
+ * 日付変更成功時の処理
+ * @param {Object} response - APIレスポンス
+ */
+function handleDayChangeSuccess(response) {
+  if (response.code !== 'SUCCESS') {
+    showError(response.message || 'データ取得に失敗しました');
+    hideLoading();
+    return;
+  }
+
+  AppState.reservations = response.data.reservations;
+  renderCurrentDate();
+  renderVehicles();
+  hideLoading();
+}
+
+// ===========================================
+// 日付表示・ナビゲーション
+// ===========================================
+function renderCurrentDate() {
+  const date = parseDate(AppState.currentDate);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+
+  document.getElementById('currentDateDisplay').textContent =
+    `${date.getFullYear()}年${month}月${day}日（${dayOfWeek}）`;
+}
+
+function goToPrevDay() {
+  const date = parseDate(AppState.currentDate);
+  date.setDate(date.getDate() - 1);
+  changeDate(formatDateForApi(date));
+}
+
+function goToNextDay() {
+  const date = parseDate(AppState.currentDate);
+  date.setDate(date.getDate() + 1);
+  changeDate(formatDateForApi(date));
+}
+
+function goToToday() {
+  const today = formatDateForDisplay(new Date());
+  changeDate(today);
+}
+
+// ===========================================
+// 車両カード表示
+// ===========================================
+function renderVehicles() {
+  const ownedContainer = document.getElementById('ownedVehicles');
+  const borrowableContainer = document.getElementById('borrowableVehicles');
+
+  ownedContainer.innerHTML = '';
+  borrowableContainer.innerHTML = '';
+
+  // 車両をカテゴリ別に分類
+  const ownedVehicles = AppState.vehicles.filter(v => v.category === 'owned');
+  const borrowableVehicles = AppState.vehicles.filter(v => v.category === 'borrowable');
+
+  // 保有車両を表示
+  ownedVehicles.forEach(vehicle => {
+    ownedContainer.appendChild(createVehicleCard(vehicle));
+  });
+
+  // 借用車両を表示
+  borrowableVehicles.forEach(vehicle => {
+    borrowableContainer.appendChild(createVehicleCard(vehicle, true));
+  });
+}
+
+/**
+ * 車両カードを作成
+ * @param {Object} vehicle - 車両データ
+ * @param {boolean} isBorrowable - 借用車両か
+ * @return {HTMLElement} カード要素
+ */
+function createVehicleCard(vehicle, isBorrowable = false) {
+  const card = document.createElement('div');
+  card.className = 'vehicle-card' + (isBorrowable ? ' borrowable' : '');
+  card.dataset.vehicleId = vehicle.vehicle_id;
+
+  // この車両の当日予約を取得
+  const vehicleReservations = AppState.reservations.filter(
+    r => r.vehicle_id === vehicle.vehicle_id
+  );
+
+  // スロット別の予約状況を整理
+  const slotStatus = {
+    AM: null,
+    PM: null,
+    FULL: null
+  };
+
+  vehicleReservations.forEach(res => {
+    if (res.slot === 'FULL') {
+      slotStatus.FULL = res;
+      slotStatus.AM = res;  // FULLは午前午後両方をカバー
+      slotStatus.PM = res;
+    } else {
+      slotStatus[res.slot] = res;
+    }
+  });
+
+  // FULLで予約されている場合
+  const isFullDayReserved = vehicleReservations.some(r => r.slot === 'FULL');
+
+  card.innerHTML = `
+    <div class="card-header">
+      <span class="vehicle-name">${escapeHtml(vehicle.display_name)}</span>
+      <span class="vehicle-plate">${escapeHtml(vehicle.plate_number || '')}</span>
+    </div>
+    <div class="card-body">
+      ${isFullDayReserved ?
+        createFullDaySlot(slotStatus.FULL, vehicle) :
+        createHalfDaySlots(slotStatus, vehicle)
+      }
+    </div>
+  `;
+
+  return card;
+}
+
+/**
+ * 終日スロットを作成
+ */
+function createFullDaySlot(reservation, vehicle) {
+  const slotDef = AppState.slots.find(s => s.name === 'FULL');
+  return `
+    <div class="slot-row">
+      <div class="slot reserved full-day"
+           onclick="showReservationDetail('${reservation.reservation_id}')">
+        <div class="slot-label">終日</div>
+        <div class="slot-time">${slotDef ? slotDef.start + '-' + slotDef.end : '08:00-18:00'}</div>
+        <div class="slot-reserver">${escapeHtml(reservation.worker_name)}</div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * 午前/午後スロットを作成
+ */
+function createHalfDaySlots(slotStatus, vehicle) {
+  const amSlot = AppState.slots.find(s => s.name === 'AM');
+  const pmSlot = AppState.slots.find(s => s.name === 'PM');
+
+  return `
+    <div class="slot-row">
+      ${createSlotElement('AM', slotStatus.AM, vehicle, amSlot)}
+      ${createSlotElement('PM', slotStatus.PM, vehicle, pmSlot)}
+    </div>
+  `;
+}
+
+/**
+ * 個別スロット要素を作成
+ */
+function createSlotElement(slotName, reservation, vehicle, slotDef) {
+  const isReserved = !!reservation;
+  const label = slotDef ? slotDef.label : (slotName === 'AM' ? '午前' : '午後');
+  const time = slotDef ? `${slotDef.start}-${slotDef.end}` : '';
+
+  if (isReserved) {
+    return `
+      <div class="slot reserved"
+           onclick="showReservationDetail('${reservation.reservation_id}')">
+        <div class="slot-label">${label}</div>
+        <div class="slot-time">${time}</div>
+        <div class="slot-reserver">${escapeHtml(reservation.worker_name)}</div>
+      </div>
+    `;
+  } else {
+    return `
+      <div class="slot"
+           onclick="openReservationModal('${vehicle.vehicle_id}', '${slotName}')">
+        <div class="slot-label">${label}</div>
+        <div class="slot-time">${time}</div>
+      </div>
+    `;
+  }
+}
+
+// ===========================================
+// 予約モーダル
+// ===========================================
+/**
+ * 予約モーダルを開く
+ * @param {string} vehicleId - 車両ID
+ * @param {string} slotName - スロット名
+ */
+function openReservationModal(vehicleId, slotName) {
+  const vehicle = AppState.vehicles.find(v => v.vehicle_id === vehicleId);
+  if (!vehicle) return;
+
+  // フォームをリセット
+  document.getElementById('reservationForm').reset();
+  document.getElementById('formError').style.display = 'none';
+
+  // 車両情報を設定
+  document.getElementById('formVehicleName').textContent = vehicle.display_name;
+  document.getElementById('formVehicleId').value = vehicleId;
+
+  // 日付を設定
+  document.getElementById('formStartDate').value = AppState.currentDate;
+  document.getElementById('formEndDate').value = AppState.currentDate;
+
+  // スロットを選択
+  selectSlot(slotName);
+
+  // 作業者選択をリセット
+  const workerSelect = document.getElementById('formWorker');
+  workerSelect.innerHTML = '<option value="">部署を選択してください</option>';
+  workerSelect.disabled = true;
+
+  // モーダルタイトルを設定
+  document.getElementById('modalTitle').textContent = '予約';
+
+  // モーダルを表示
+  document.getElementById('reservationModal').classList.add('active');
+}
+
+/**
+ * スロットを選択
+ * @param {string} slotName - スロット名
+ */
+function selectSlot(slotName) {
+  AppState.selectedSlot = slotName;
+  document.getElementById('formSlot').value = slotName;
+
+  // ボタンの状態を更新
+  document.querySelectorAll('.slot-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.slot === slotName);
+  });
+}
+
+/**
+ * 予約モーダルを閉じる
+ */
+function closeReservationModal() {
+  document.getElementById('reservationModal').classList.remove('active');
+  AppState.selectedSlot = null;
+}
+
+/**
+ * 部署変更時の処理
+ */
+function handleDeptChange() {
+  const deptName = document.getElementById('formDept').value;
+  const workerSelect = document.getElementById('formWorker');
+
+  if (!deptName) {
+    workerSelect.innerHTML = '<option value="">部署を選択してください</option>';
+    workerSelect.disabled = true;
+    return;
+  }
+
+  // ローディング表示
+  workerSelect.innerHTML = '<option value="">読み込み中...</option>';
+  workerSelect.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      if (response.code !== 'SUCCESS') {
+        workerSelect.innerHTML = '<option value="">取得エラー</option>';
+        return;
+      }
+
+      const workers = response.data.workers;
+      workerSelect.innerHTML = '<option value="">選択してください</option>';
+
+      workers.forEach(worker => {
+        const option = document.createElement('option');
+        option.value = worker.worker_code;
+        option.textContent = worker.worker_name;
+        option.dataset.workerCode = worker.worker_code;
+        option.dataset.workerName = worker.worker_name;
+        workerSelect.appendChild(option);
+      });
+
+      workerSelect.disabled = false;
+    })
+    .withFailureHandler(function(error) {
+      workerSelect.innerHTML = '<option value="">取得エラー</option>';
+      console.error('Worker fetch error:', error);
+    })
+    .getWorkersByDeptApi(deptName);
+}
+
+/**
+ * 部署プルダウンを設定
+ */
+function populateDepts() {
+  const deptSelect = document.getElementById('formDept');
+  deptSelect.innerHTML = '<option value="">選択してください</option>';
+
+  AppState.depts.forEach(dept => {
+    const option = document.createElement('option');
+    option.value = dept.dept_name;
+    option.textContent = dept.dept_name;
+    deptSelect.appendChild(option);
+  });
+}
+
+/**
+ * 日付範囲バリデーション
+ */
+function validateDateRange() {
+  const startDate = document.getElementById('formStartDate').value;
+  const endDate = document.getElementById('formEndDate').value;
+
+  if (startDate && endDate && startDate > endDate) {
+    document.getElementById('formEndDate').value = startDate;
+  }
+}
+
+/**
+ * 予約を送信
+ */
+function submitReservation() {
+  const form = document.getElementById('reservationForm');
+  const errorEl = document.getElementById('formError');
+
+  // バリデーション
+  const vehicleId = document.getElementById('formVehicleId').value;
+  const startDate = document.getElementById('formStartDate').value;
+  const endDate = document.getElementById('formEndDate').value;
+  const slot = document.getElementById('formSlot').value;
+  const deptName = document.getElementById('formDept').value;
+  const workerSelect = document.getElementById('formWorker');
+  const workerCode = workerSelect.value;
+  const workerName = workerSelect.options[workerSelect.selectedIndex]?.dataset?.workerName || '';
+
+  // 必須チェック
+  if (!vehicleId || !startDate || !endDate || !slot || !deptName || !workerCode) {
+    errorEl.textContent = '必須項目を入力してください';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  // ボタンを無効化
+  const submitBtn = document.getElementById('btnModalSubmit');
+  submitBtn.disabled = true;
+  submitBtn.textContent = '処理中...';
+
+  // 予約データを作成
+  const payload = {
+    vehicle_id: vehicleId,
+    start_date: startDate,
+    end_date: endDate,
+    slot: slot,
+    dept_name: deptName,
+    worker_code: workerCode,
+    worker_name: workerName,
+    purpose: document.getElementById('formPurpose').value,
+    destination: document.getElementById('formDestination').value,
+    memo: document.getElementById('formMemo').value
+  };
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '予約する';
+
+      if (response.code !== 'SUCCESS') {
+        errorEl.textContent = response.message || '予約に失敗しました';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      // 成功
+      closeReservationModal();
+      updateSaveStatus('saving');
+
+      // データを再取得
+      google.script.run
+        .withSuccessHandler(function(dayResponse) {
+          if (dayResponse.code === 'SUCCESS') {
+            AppState.reservations = dayResponse.data.reservations;
+            renderVehicles();
+          }
+          updateSaveStatus('saved');
+        })
+        .withFailureHandler(function() {
+          updateSaveStatus('error');
+        })
+        .getDay(AppState.currentDate);
+    })
+    .withFailureHandler(function(error) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '予約する';
+      errorEl.textContent = 'エラーが発生しました: ' + error.message;
+      errorEl.style.display = 'block';
+    })
+    .createReservation(payload);
+}
+
+// ===========================================
+// 予約詳細モーダル
+// ===========================================
+/**
+ * 予約詳細を表示
+ * @param {string} reservationId - 予約ID
+ */
+function showReservationDetail(reservationId) {
+  AppState.currentReservationId = reservationId;
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      if (response.code !== 'SUCCESS') {
+        showError(response.message || '詳細取得に失敗しました');
+        return;
+      }
+
+      const data = response.data;
+      const res = data.reservation;
+      const vehicle = data.vehicle;
+
+      // 詳細を表示
+      document.getElementById('detailVehicle').textContent = vehicle ? vehicle.display_name : '-';
+      document.getElementById('detailPeriod').textContent =
+        res.start_date === res.end_date ?
+          formatDateDisplay(res.start_date) :
+          `${formatDateDisplay(res.start_date)} 〜 ${formatDateDisplay(res.end_date)}`;
+
+      const slotDef = AppState.slots.find(s => s.name === res.slot);
+      document.getElementById('detailSlot').textContent = slotDef ? slotDef.label : res.slot;
+
+      document.getElementById('detailReserver').textContent =
+        `${res.dept_name} / ${res.worker_name}`;
+      document.getElementById('detailPurpose').textContent = res.purpose || '-';
+      document.getElementById('detailDestination').textContent = res.destination || '-';
+      document.getElementById('detailMemo').textContent = res.memo || '-';
+      document.getElementById('detailReservationId').value = reservationId;
+
+      // モーダルを表示
+      document.getElementById('detailModal').classList.add('active');
+    })
+    .withFailureHandler(handleError)
+    .getReservationDetail(reservationId);
+}
+
+/**
+ * 詳細モーダルを閉じる
+ */
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.remove('active');
+  AppState.currentReservationId = null;
+}
+
+/**
+ * 予約キャンセル確認
+ */
+function confirmCancelReservation() {
+  document.getElementById('confirmMessage').textContent =
+    'この予約をキャンセルしますか？';
+  document.getElementById('confirmModal').classList.add('active');
+}
+
+/**
+ * 予約キャンセル実行
+ */
+function executeCancelReservation() {
+  const reservationId = document.getElementById('detailReservationId').value;
+
+  if (!reservationId) {
+    closeConfirmModal();
+    return;
+  }
+
+  const confirmBtn = document.getElementById('btnConfirmYes');
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = '処理中...';
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'はい';
+
+      closeConfirmModal();
+      closeDetailModal();
+
+      if (response.code !== 'SUCCESS') {
+        showError(response.message || 'キャンセルに失敗しました');
+        return;
+      }
+
+      updateSaveStatus('saving');
+
+      // データを再取得
+      google.script.run
+        .withSuccessHandler(function(dayResponse) {
+          if (dayResponse.code === 'SUCCESS') {
+            AppState.reservations = dayResponse.data.reservations;
+            renderVehicles();
+          }
+          updateSaveStatus('saved');
+        })
+        .withFailureHandler(function() {
+          updateSaveStatus('error');
+        })
+        .getDay(AppState.currentDate);
+    })
+    .withFailureHandler(function(error) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'はい';
+      closeConfirmModal();
+      showError('エラーが発生しました: ' + error.message);
+    })
+    .cancelReservationApi(reservationId);
+}
+
+/**
+ * 確認モーダルを閉じる
+ */
+function closeConfirmModal() {
+  document.getElementById('confirmModal').classList.remove('active');
+}
+
+/**
+ * 全モーダルを閉じる
+ */
+function closeAllModals() {
+  document.querySelectorAll('.modal-overlay').forEach(modal => {
+    modal.classList.remove('active');
+  });
+}
+
+// ===========================================
+// ステータス表示
+// ===========================================
+/**
+ * 保存ステータスを更新
+ * @param {string} status - saved/saving/error
+ */
+function updateSaveStatus(status) {
+  const statusEl = document.getElementById('saveStatus');
+  const iconEl = statusEl.querySelector('.status-icon');
+  const textEl = statusEl.querySelector('.status-text');
+
+  statusEl.classList.remove('saving', 'error');
+
+  switch (status) {
+    case 'saving':
+      statusEl.classList.add('saving');
+      iconEl.textContent = '↻';
+      textEl.textContent = '保存中...';
+      break;
+    case 'error':
+      statusEl.classList.add('error');
+      iconEl.textContent = '!';
+      textEl.textContent = 'エラー';
+      break;
+    default:
+      iconEl.textContent = '✓';
+      textEl.textContent = '保存済み';
+  }
+}
+
+// ===========================================
+// ローディング
+// ===========================================
+function showLoading() {
+  document.getElementById('loading').classList.remove('hidden');
+}
+
+function hideLoading() {
+  document.getElementById('loading').classList.add('hidden');
+}
+
+// ===========================================
+// エラー処理
+// ===========================================
+function handleError(error) {
+  console.error('Error:', error);
+  hideLoading();
+  showError(error.message || 'エラーが発生しました');
+}
+
+function showError(message) {
+  alert(message); // シンプルにalertで表示（将来はトースト通知に変更可）
+}
+
+// ===========================================
+// ユーティリティ関数
+// ===========================================
+/**
+ * HTMLエスケープ
+ */
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * 日付文字列をパース（YYYY-MM-DD）
+ */
+function parseDate(dateStr) {
+  if (!dateStr) return new Date();
+  const parts = dateStr.split('-');
+  return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+}
+
+/**
+ * DateをYYYY-MM-DD形式に変換
+ */
+function formatDateForApi(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * 今日の日付をYYYY-MM-DD形式で取得
+ */
+function formatDateForDisplay(date) {
+  return formatDateForApi(date);
+}
+
+/**
+ * 日付を表示用にフォーマット（M月D日）
+ */
+function formatDateDisplay(dateStr) {
+  const date = parseDate(dateStr);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+  return `${month}月${day}日（${dayOfWeek}）`;
+}
+</script>

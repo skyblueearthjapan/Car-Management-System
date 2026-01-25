@@ -1,0 +1,872 @@
+<style>
+/* ===========================================
+   車両管理予約システム - スタイルシート
+   css.html
+   =========================================== */
+
+/* ===========================================
+   リセット・ベース
+   =========================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 14px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans JP', sans-serif;
+  background-color: #f5f5f5;
+  color: #333;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ===========================================
+   ローディングオーバーレイ
+   =========================================== */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-overlay.hidden {
+  display: none;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #1976d2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-overlay p {
+  margin-top: 16px;
+  color: #666;
+  font-size: 1rem;
+}
+
+/* ===========================================
+   ヘッダー
+   =========================================== */
+.header {
+  background: #1976d2;
+  color: white;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header-left {
+  flex: 0 0 auto;
+}
+
+.header-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 0 20px;
+  overflow-x: auto;
+}
+
+.header-right {
+  flex: 0 0 auto;
+}
+
+/* 週タブ */
+.week-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.week-tab {
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 50px;
+}
+
+.week-tab:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.week-tab.active {
+  background: white;
+  color: #1976d2;
+  font-weight: 600;
+}
+
+.week-tab.today {
+  position: relative;
+}
+
+.week-tab.today::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  background: #ff9800;
+  border-radius: 50%;
+}
+
+.week-tab .tab-date {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.week-tab .tab-day {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.week-tab.active .tab-day {
+  opacity: 1;
+}
+
+.week-tab.sunday {
+  color: rgba(255, 100, 100, 0.9);
+}
+
+.week-tab.sunday.active {
+  color: #d32f2f;
+}
+
+.week-tab.saturday {
+  color: rgba(100, 150, 255, 0.9);
+}
+
+.week-tab.saturday.active {
+  color: #1565c0;
+}
+
+/* ===========================================
+   サブヘッダー
+   =========================================== */
+.subheader {
+  background: white;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e0e0e0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.subheader-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.current-date {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.subheader-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* 保存ステータス */
+.save-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: #4caf50;
+}
+
+.save-status.saving {
+  color: #ff9800;
+}
+
+.save-status.error {
+  color: #f44336;
+}
+
+.status-icon {
+  font-size: 1rem;
+}
+
+/* ナビゲーションボタン */
+.nav-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* ===========================================
+   ボタン共通
+   =========================================== */
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #1976d2;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.btn-secondary {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #d0d0d0;
+}
+
+.btn-danger {
+  background: #f44336;
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #d32f2f;
+}
+
+.btn-nav {
+  background: #f5f5f5;
+  color: #333;
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+}
+
+.btn-nav:hover:not(:disabled) {
+  background: #e8e8e8;
+}
+
+/* ===========================================
+   メインコンテンツ
+   =========================================== */
+.main-content {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ===========================================
+   車両セクション
+   =========================================== */
+.vehicle-section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 12px;
+  padding-left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title::before {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 16px;
+  background: #ff9800;
+  border-radius: 2px;
+}
+
+/* 車両グリッド */
+.vehicle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.borrowable-grid {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+/* ===========================================
+   車両カード
+   =========================================== */
+.vehicle-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.vehicle-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.vehicle-card.borrowable {
+  border: 2px dashed #e0e0e0;
+}
+
+/* カードヘッダー */
+.card-header {
+  padding: 12px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vehicle-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.vehicle-plate {
+  font-size: 0.75rem;
+  color: #999;
+  font-family: monospace;
+}
+
+/* カードボディ */
+.card-body {
+  padding: 12px 16px;
+}
+
+/* スロット */
+.slot-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.slot-row:last-child {
+  margin-bottom: 0;
+}
+
+.slot {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #e8f5e9;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.slot:hover {
+  border-color: #4caf50;
+}
+
+.slot.reserved {
+  background: #fff3e0;
+  cursor: pointer;
+}
+
+.slot.reserved:hover {
+  border-color: #ff9800;
+}
+
+.slot.my-reservation {
+  background: #e3f2fd;
+}
+
+.slot.my-reservation:hover {
+  border-color: #2196f3;
+}
+
+.slot.disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.slot.disabled:hover {
+  border-color: transparent;
+}
+
+.slot-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 2px;
+}
+
+.slot-time {
+  font-size: 0.625rem;
+  color: #999;
+}
+
+.slot-reserver {
+  font-size: 0.75rem;
+  color: #333;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slot.reserved .slot-label {
+  color: #e65100;
+}
+
+.slot.my-reservation .slot-label {
+  color: #1565c0;
+}
+
+/* 全日スロット */
+.slot.full-day {
+  background: linear-gradient(135deg, #e8f5e9 50%, #e8f5e9 50%);
+}
+
+.slot.full-day.reserved {
+  background: linear-gradient(135deg, #fff3e0 50%, #fff3e0 50%);
+}
+
+/* ===========================================
+   モーダル共通
+   =========================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(20px);
+  transition: transform 0.2s;
+}
+
+.modal-overlay.active .modal {
+  transform: translateY(0);
+}
+
+.modal.modal-sm {
+  max-width: 400px;
+}
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* ===========================================
+   フォーム
+   =========================================== */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.form-label .required {
+  color: #f44336;
+}
+
+.form-value {
+  font-size: 1rem;
+  color: #333;
+  padding: 8px 0;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+.form-input:disabled,
+.form-select:disabled {
+  background: #f5f5f5;
+  color: #999;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+/* スロット選択ボタン */
+.slot-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.slot-btn {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.slot-btn:hover {
+  border-color: #1976d2;
+}
+
+.slot-btn.active {
+  border-color: #1976d2;
+  background: #e3f2fd;
+}
+
+.slot-btn .slot-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.slot-btn .slot-time {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* エラーメッセージ */
+.form-error {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-top: 16px;
+}
+
+/* ===========================================
+   予約詳細モーダル
+   =========================================== */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.detail-value {
+  font-size: 0.9375rem;
+  color: #333;
+}
+
+/* ===========================================
+   レスポンシブ
+   =========================================== */
+@media (max-width: 768px) {
+  html {
+    font-size: 13px;
+  }
+
+  .header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .header-center {
+    order: 3;
+    flex: 1 0 100%;
+    padding: 0;
+    justify-content: flex-start;
+  }
+
+  .week-tabs {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .week-tab {
+    min-width: 44px;
+    padding: 6px 8px;
+  }
+
+  .subheader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .subheader-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .main-content {
+    padding: 12px;
+  }
+
+  .vehicle-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .slot-buttons {
+    flex-direction: column;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal {
+    width: 95%;
+    max-height: 95vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-title {
+    font-size: 1rem;
+  }
+
+  .nav-buttons {
+    flex-wrap: wrap;
+  }
+
+  .btn-nav {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+}
+
+/* ===========================================
+   アニメーション
+   =========================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.vehicle-card {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* ===========================================
+   トースト通知（将来用）
+   =========================================== */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  padding: 12px 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 0.875rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease-out;
+}
+
+.toast.success {
+  background: #4caf50;
+}
+
+.toast.error {
+  background: #f44336;
+}
+
+.toast.warning {
+  background: #ff9800;
+}
+
+.toast.info {
+  background: #2196f3;
+}
+</style>
