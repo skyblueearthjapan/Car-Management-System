@@ -16,6 +16,8 @@
 | ui_style | N | enum | `sedan`/`minivan`/`van`/`kei_truck`/`suv`...（UI描画ヒント）。 |
 | image_drive_file_id | N | string | 画像に逃げる場合のDrive File ID。 |
 | active | Y | bool | 非表示/廃車対応。TRUEのみ表示。 |
+| tags | N | string | タグ（任意）。 |
+| notes | N | string | 備考（任意）。 |
 
 ### 初期データ（車両マスタ）
 
@@ -92,6 +94,10 @@
 | column | required | type | description |
 |--------|----------|------|-------------|
 | dept_name | Y | string | 部署名一覧（同期）。 |
+| active | Y | bool | 有効フラグ。TRUEのみ表示。 |
+| display_order | N | number | 表示順。 |
+| notes | N | string | 備考（任意）。 |
+| synced_at | N | datetime | 同期日時。 |
 
 ---
 
