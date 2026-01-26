@@ -316,6 +316,8 @@
       reservation_id: '',
       dept_name: '',
       worker_name: '',
+      date: S.dateISO,
+      memo: '',
     });
 
     let am = base('AM');
@@ -337,6 +339,8 @@
         reservation_id: fullRow.reservation_id,
         dept_name: fullRow.dept_name,
         worker_name: fullRow.worker_name,
+        date: fullRow.date || S.dateISO,
+        memo: fullRow.memo || '',
       };
       return { am: null, pm: null, full: fullState };
     }
@@ -351,6 +355,8 @@
         detail: (amRow.start_time && amRow.end_time) ? `※ ${amRow.start_time}–${amRow.end_time}` : '',
         reservation_id: amRow.reservation_id,
         dept_name: amRow.dept_name, worker_name: amRow.worker_name,
+        date: amRow.date || S.dateISO,
+        memo: amRow.memo || '',
       };
     }
     const pmRow = rows.find(r => String(r.slot) === 'PM');
@@ -362,6 +368,8 @@
         detail: (pmRow.start_time && pmRow.end_time) ? `※ ${pmRow.start_time}–${pmRow.end_time}` : '',
         reservation_id: pmRow.reservation_id,
         dept_name: pmRow.dept_name, worker_name: pmRow.worker_name,
+        date: pmRow.date || S.dateISO,
+        memo: pmRow.memo || '',
       };
     }
 
@@ -469,6 +477,7 @@
             <div class="slotFull__title">${escapeHtml(full.title)}</div>
             <div class="slotFull__user">${escapeHtml(full.user)}</div>
             <div class="slotFull__time">${escapeHtml(full.time)}</div>
+            ${full.memo ? `<div class="slotFull__memo">📍 ${escapeHtml(full.memo)}</div>` : ''}
           </button>
         </div>
       `;
@@ -532,6 +541,7 @@
     const cls = s.status === 'ng' ? 'slot slot--ng' : 'slot slot--ok';
     const userLine = s.user ? `<div class="slot__user">${escapeHtml(s.user)}</div>` : '';
     const detailLine = s.detail ? `<div class="slot__detail">${escapeHtml(s.detail)}</div>` : '';
+    const memoLine = s.memo ? `<div class="slot__memo">📍 ${escapeHtml(s.memo)}</div>` : '';
     return `
       <button class="${cls}" data-slot="${s.slot}">
         <div class="slot__head">
@@ -542,6 +552,7 @@
         ${userLine}
         <div class="slot__time">${escapeHtml(s.time)}</div>
         ${detailLine}
+        ${memoLine}
       </button>
     `;
   }
@@ -769,6 +780,16 @@
   // Detail / Cancel modal
   // ---------------------------
   function openDetailModal(vehicle, slotState){
+    // 使用期間を計算
+    const dateStr = slotState.date || S.dateISO;
+    const dt = isoToDate(dateStr);
+    const formattedDate = `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日`;
+    let timeRange = '';
+    if (slotState.slot === 'AM') timeRange = '08:00〜13:00';
+    else if (slotState.slot === 'PM') timeRange = '13:00〜18:00';
+    else if (slotState.slot === 'FULL') timeRange = '08:00〜18:00';
+    const usagePeriod = `${formattedDate} ${timeRange}`;
+
     const bodyHtml = `
       <div class="detailRow">
         <div class="detailLabel">車両</div>
@@ -779,6 +800,10 @@
         <div class="detailValue">${escapeHtml(slotState.slot)}</div>
       </div>
       <div class="detailRow">
+        <div class="detailLabel">使用期間</div>
+        <div class="detailValue">${escapeHtml(usagePeriod)}</div>
+      </div>
+      <div class="detailRow">
         <div class="detailLabel">部署</div>
         <div class="detailValue">${escapeHtml(slotState.dept_name)}</div>
       </div>
@@ -786,10 +811,10 @@
         <div class="detailLabel">氏名</div>
         <div class="detailValue">${escapeHtml(slotState.worker_name)}</div>
       </div>
-      ${slotState.detail ? `
+      ${slotState.memo ? `
       <div class="detailRow">
-        <div class="detailLabel">時間</div>
-        <div class="detailValue">${escapeHtml(slotState.detail)}</div>
+        <div class="detailLabel">メモ</div>
+        <div class="detailValue">${escapeHtml(slotState.memo)}</div>
       </div>
       ` : ''}
       <div class="detailRow" style="border:none; padding-top: 16px;">
