@@ -318,6 +318,8 @@
       worker_name: '',
       date: S.dateISO,
       memo: '',
+      start_date: '',
+      end_date: '',
     });
 
     let am = base('AM');
@@ -341,6 +343,8 @@
         worker_name: fullRow.worker_name,
         date: fullRow.date || S.dateISO,
         memo: fullRow.memo || '',
+        start_date: fullRow.start_date || fullRow.date || S.dateISO,
+        end_date: fullRow.end_date || fullRow.date || S.dateISO,
       };
       return { am: null, pm: null, full: fullState };
     }
@@ -357,6 +361,8 @@
         dept_name: amRow.dept_name, worker_name: amRow.worker_name,
         date: amRow.date || S.dateISO,
         memo: amRow.memo || '',
+        start_date: amRow.start_date || amRow.date || S.dateISO,
+        end_date: amRow.end_date || amRow.date || S.dateISO,
       };
     }
     const pmRow = rows.find(r => String(r.slot) === 'PM');
@@ -370,6 +376,8 @@
         dept_name: pmRow.dept_name, worker_name: pmRow.worker_name,
         date: pmRow.date || S.dateISO,
         memo: pmRow.memo || '',
+        start_date: pmRow.start_date || pmRow.date || S.dateISO,
+        end_date: pmRow.end_date || pmRow.date || S.dateISO,
       };
     }
 
@@ -461,6 +469,16 @@
 
     // 終日予約がある場合は異なるレイアウト
     if (full) {
+      // 日付付き時間表示を計算
+      let fullTimeDisplay = full.time;
+      if (full.start_date && full.end_date) {
+        if (full.start_date === full.end_date) {
+          fullTimeDisplay = `${formatDateShort(full.start_date)} ${full.time}`;
+        } else {
+          fullTimeDisplay = `${formatDateShort(full.start_date)}〜${formatDateShort(full.end_date)}`;
+        }
+      }
+
       tile.innerHTML = `
         ${warningOverlayHtml}
         <div class="vehicleTile__top">
@@ -476,7 +494,7 @@
             <div class="slotFull__badge">${escapeHtml(full.badge)}</div>
             <div class="slotFull__title">${escapeHtml(full.title)}</div>
             <div class="slotFull__user">${escapeHtml(full.user)}</div>
-            <div class="slotFull__time">${escapeHtml(full.time)}</div>
+            <div class="slotFull__time">${escapeHtml(fullTimeDisplay)}</div>
             ${full.memo ? `<div class="slotFull__memo">📍 ${escapeHtml(full.memo)}</div>` : ''}
           </button>
         </div>
@@ -542,6 +560,19 @@
     const userLine = s.user ? `<div class="slot__user">${escapeHtml(s.user)}</div>` : '';
     const detailLine = s.detail ? `<div class="slot__detail">${escapeHtml(s.detail)}</div>` : '';
     const memoLine = s.memo ? `<div class="slot__memo">📍 ${escapeHtml(s.memo)}</div>` : '';
+
+    // 予約ありの場合は日付付きで表示
+    let timeDisplay = s.time;
+    if (s.status === 'ng' && s.start_date && s.end_date) {
+      if (s.start_date === s.end_date) {
+        // 同日
+        timeDisplay = `${formatDateShort(s.start_date)} ${s.time}`;
+      } else {
+        // 複数日
+        timeDisplay = `${formatDateShort(s.start_date)}〜${formatDateShort(s.end_date)}`;
+      }
+    }
+
     return `
       <button class="${cls}" data-slot="${s.slot}">
         <div class="slot__head">
@@ -550,7 +581,7 @@
         </div>
         <div class="slot__title">${escapeHtml(s.title)}</div>
         ${userLine}
-        <div class="slot__time">${escapeHtml(s.time)}</div>
+        <div class="slot__time">${escapeHtml(timeDisplay)}</div>
         ${detailLine}
         ${memoLine}
       </button>
@@ -779,16 +810,33 @@
   // ---------------------------
   // Detail / Cancel modal
   // ---------------------------
+  // 日付フォーマット用ヘルパー
+  function formatDateJP(iso){
+    const dt = isoToDate(iso);
+    return `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日`;
+  }
+  function formatDateShort(iso){
+    const dt = isoToDate(iso);
+    return `${dt.getMonth()+1}/${dt.getDate()}`;
+  }
+
   function openDetailModal(vehicle, slotState){
-    // 使用期間を計算
-    const dateStr = slotState.date || S.dateISO;
-    const dt = isoToDate(dateStr);
-    const formattedDate = `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日`;
-    let timeRange = '';
-    if (slotState.slot === 'AM') timeRange = '08:00〜13:00';
-    else if (slotState.slot === 'PM') timeRange = '13:00〜18:00';
-    else if (slotState.slot === 'FULL') timeRange = '08:00〜18:00';
-    const usagePeriod = `${formattedDate} ${timeRange}`;
+    // 使用期間を計算（開始日〜終了日）
+    const startDateStr = slotState.start_date || slotState.date || S.dateISO;
+    const endDateStr = slotState.end_date || slotState.date || S.dateISO;
+
+    let startTime = '', endTime = '';
+    if (slotState.slot === 'AM') { startTime = '08:00'; endTime = '13:00'; }
+    else if (slotState.slot === 'PM') { startTime = '13:00'; endTime = '18:00'; }
+    else if (slotState.slot === 'FULL') { startTime = '08:00'; endTime = '18:00'; }
+
+    // 同日か複数日かで表示を変える
+    let usagePeriod = '';
+    if (startDateStr === endDateStr) {
+      usagePeriod = `${formatDateJP(startDateStr)} ${startTime}〜${endTime}`;
+    } else {
+      usagePeriod = `${formatDateJP(startDateStr)} ${startTime} 〜 ${formatDateJP(endDateStr)} ${endTime}`;
+    }
 
     const bodyHtml = `
       <div class="detailRow">

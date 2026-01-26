@@ -33,7 +33,9 @@ function getDayReservationsJoined_(dateISO) {
         dept_name: h.dept_name,
         worker_name: h.worker_name,
         worker_code: h.worker_code,
-        memo: h.memo || '',  // メモを追加
+        memo: h.memo || '',
+        start_date: normalizeToISO_(h.start_date),  // 予約開始日
+        end_date: normalizeToISO_(h.end_date),      // 予約終了日
       };
     })
     .filter(Boolean);
