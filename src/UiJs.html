@@ -325,19 +325,28 @@
     let am = base('AM');
     let pm = base('PM');
 
+    // Helper: 予約時間の表示文字列を生成
+    function getTimeDisplay(row, defaultTime) {
+      if (row.start_time && row.end_time) {
+        return `${row.start_time}–${row.end_time}`;
+      }
+      return defaultTime;
+    }
+
     // FULL first - 終日予約がある場合
     const fullRow = rows.find(r => String(r.slot) === 'FULL');
     if (fullRow){
       const user = `${fullRow.dept_name}　${fullRow.worker_name}`;
-      const detail = (fullRow.start_time && fullRow.end_time) ? `※ ${fullRow.start_time}–${fullRow.end_time}` : '';
       const fullState = {
         slot: 'FULL',
         status: 'ng',
         badge: '終日使用中',
         title: '終日使用の為、予約できません',
         user,
-        time: '08:00–18:00',
-        detail,
+        time: getTimeDisplay(fullRow, '08:00–18:00'),
+        start_time: fullRow.start_time || '',
+        end_time: fullRow.end_time || '',
+        detail: '',
         reservation_id: fullRow.reservation_id,
         dept_name: fullRow.dept_name,
         worker_name: fullRow.worker_name,
@@ -356,7 +365,10 @@
         ...am,
         status:'ng', badge:'使用中', title:'使えません（予約あり）',
         user: `${amRow.dept_name}　${amRow.worker_name}`,
-        detail: (amRow.start_time && amRow.end_time) ? `※ ${amRow.start_time}–${amRow.end_time}` : '',
+        time: getTimeDisplay(amRow, SLOT_TIME['AM']),
+        start_time: amRow.start_time || '',
+        end_time: amRow.end_time || '',
+        detail: '',
         reservation_id: amRow.reservation_id,
         dept_name: amRow.dept_name, worker_name: amRow.worker_name,
         date: amRow.date || S.dateISO,
@@ -371,7 +383,10 @@
         ...pm,
         status:'ng', badge:'使用中', title:'使えません（予約あり）',
         user: `${pmRow.dept_name}　${pmRow.worker_name}`,
-        detail: (pmRow.start_time && pmRow.end_time) ? `※ ${pmRow.start_time}–${pmRow.end_time}` : '',
+        time: getTimeDisplay(pmRow, SLOT_TIME['PM']),
+        start_time: pmRow.start_time || '',
+        end_time: pmRow.end_time || '',
+        detail: '',
         reservation_id: pmRow.reservation_id,
         dept_name: pmRow.dept_name, worker_name: pmRow.worker_name,
         date: pmRow.date || S.dateISO,
@@ -611,12 +626,20 @@
           <label>車両</label>
           <div class="input" style="background:#f5f6f8;">${escapeHtml(vehicle.name)}</div>
         </div>
-        <div class="field">
-          <label>スロット</label>
+        <div class="field fullRow">
+          <label>時間帯</label>
           <div class="chipRow" id="slotChips">
-            <button type="button" class="chip${slot === 'AM' ? ' is-active' : ''}" data-slot="AM">AM</button>
-            <button type="button" class="chip${slot === 'PM' ? ' is-active' : ''}" data-slot="PM">PM</button>
+            <button type="button" class="chip${slot === 'AM' ? ' is-active' : ''}" data-slot="AM">AM (08:00-13:00)</button>
+            <button type="button" class="chip${slot === 'PM' ? ' is-active' : ''}" data-slot="PM">PM (13:00-18:00)</button>
             <button type="button" class="chip${slot === 'FULL' ? ' is-active' : ''}" data-slot="FULL">終日</button>
+          </div>
+          <div class="timeline" id="timeline">
+            <div class="timeline__header">
+              <span class="timeline__hint">ドラッグで時間を選択</span>
+              <span class="timeline__display" id="timeDisplay">08:00 - 18:00</span>
+            </div>
+            <div class="timeline__labels" id="timelineLabels"></div>
+            <div class="timeline__bar" id="timelineBar"></div>
           </div>
         </div>
         <div class="field">
@@ -658,14 +681,160 @@
     // State for this modal
     let selectedSlot = slot;
     let selectedWorker = null;
+    let selectedStartTime = slot === 'AM' ? '08:00' : (slot === 'PM' ? '13:00' : '08:00');
+    let selectedEndTime = slot === 'AM' ? '13:00' : (slot === 'PM' ? '18:00' : '18:00');
 
-    // Slot chip toggle
+    // Timeline setup - 30分刻み、08:00-18:00
+    const TIMELINE_START = 8; // 08:00
+    const TIMELINE_END = 18;  // 18:00
+    const INTERVAL = 30;      // 30分
+    const CELLS = (TIMELINE_END - TIMELINE_START) * (60 / INTERVAL); // 20 cells
+
+    function timeToIndex(time) {
+      const [hh, mm] = time.split(':').map(Number);
+      return ((hh - TIMELINE_START) * 60 + mm) / INTERVAL;
+    }
+
+    function indexToTime(idx) {
+      const totalMin = TIMELINE_START * 60 + idx * INTERVAL;
+      const hh = Math.floor(totalMin / 60);
+      const mm = totalMin % 60;
+      return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+    }
+
+    function updateTimeDisplay() {
+      const display = $('timeDisplay');
+      if (display) display.textContent = `${selectedStartTime} - ${selectedEndTime}`;
+    }
+
+    function updateTimelineSelection() {
+      const startIdx = timeToIndex(selectedStartTime);
+      const endIdx = timeToIndex(selectedEndTime);
+      const cells = document.querySelectorAll('#timelineBar .timeline__cell');
+      cells.forEach((cell, i) => {
+        const isSelected = i >= startIdx && i < endIdx;
+        cell.classList.toggle('is-selected', isSelected);
+        cell.classList.toggle('is-start', i === startIdx);
+        cell.classList.toggle('is-end', i === endIdx - 1);
+      });
+      updateTimeDisplay();
+    }
+
+    function determineSlotFromTime(startTime, endTime) {
+      if (startTime === '08:00' && endTime === '13:00') return 'AM';
+      if (startTime === '13:00' && endTime === '18:00') return 'PM';
+      if (startTime === '08:00' && endTime === '18:00') return 'FULL';
+      // カスタム時間の場合は最も近いスロットを選択
+      const startMin = timeToIndex(startTime) * INTERVAL + TIMELINE_START * 60;
+      if (startMin < 13 * 60) return 'AM';
+      return 'PM';
+    }
+
+    function syncChipsWithTime() {
+      const newSlot = determineSlotFromTime(selectedStartTime, selectedEndTime);
+      const slotChips = document.querySelectorAll('#slotChips .chip');
+      slotChips.forEach(c => c.classList.remove('is-active'));
+      const matchingChip = document.querySelector(`#slotChips .chip[data-slot="${newSlot}"]`);
+      if (matchingChip) matchingChip.classList.add('is-active');
+      selectedSlot = newSlot;
+    }
+
+    // Build timeline labels (hourly)
+    const labelsEl = $('timelineLabels');
+    for (let h = TIMELINE_START; h <= TIMELINE_END; h++) {
+      const label = document.createElement('span');
+      label.className = 'timeline__label';
+      label.textContent = h < TIMELINE_END ? String(h).padStart(2, '0') : '';
+      label.style.flex = h < TIMELINE_END ? '2' : '0';
+      labelsEl.appendChild(label);
+    }
+
+    // Build timeline cells
+    const barEl = $('timelineBar');
+    for (let i = 0; i < CELLS; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'timeline__cell';
+      cell.dataset.index = i;
+      // 1時間ごとの区切り線
+      if ((i + 1) % 2 === 0 && i < CELLS - 1) {
+        cell.classList.add('is-hour');
+      }
+      barEl.appendChild(cell);
+    }
+
+    // Initialize timeline selection
+    updateTimelineSelection();
+
+    // Timeline drag logic
+    let isDragging = false;
+    let dragStart = null;
+
+    function handleDragStart(e) {
+      const cell = e.target.closest('.timeline__cell');
+      if (!cell) return;
+      isDragging = true;
+      dragStart = parseInt(cell.dataset.index, 10);
+      e.preventDefault();
+    }
+
+    function handleDragMove(e) {
+      if (!isDragging) return;
+      const bar = $('timelineBar');
+      const rect = bar.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const relX = clientX - rect.left;
+      const cellWidth = rect.width / CELLS;
+      let idx = Math.floor(relX / cellWidth);
+      idx = Math.max(0, Math.min(CELLS - 1, idx));
+
+      const minIdx = Math.min(dragStart, idx);
+      const maxIdx = Math.max(dragStart, idx);
+      selectedStartTime = indexToTime(minIdx);
+      selectedEndTime = indexToTime(maxIdx + 1);
+      updateTimelineSelection();
+    }
+
+    function handleDragEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      dragStart = null;
+      syncChipsWithTime();
+    }
+
+    barEl.addEventListener('mousedown', handleDragStart);
+    barEl.addEventListener('touchstart', handleDragStart, { passive: false });
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('touchmove', handleDragMove, { passive: false });
+    document.addEventListener('mouseup', handleDragEnd);
+    document.addEventListener('touchend', handleDragEnd);
+
+    // Cleanup function for event listeners
+    function cleanupTimelineListeners() {
+      document.removeEventListener('mousemove', handleDragMove);
+      document.removeEventListener('touchmove', handleDragMove);
+      document.removeEventListener('mouseup', handleDragEnd);
+      document.removeEventListener('touchend', handleDragEnd);
+    }
+
+    // Slot chip toggle - also updates timeline
     const slotChips = document.querySelectorAll('#slotChips .chip');
     slotChips.forEach(chip => {
       chip.addEventListener('click', () => {
         slotChips.forEach(c => c.classList.remove('is-active'));
         chip.classList.add('is-active');
         selectedSlot = chip.dataset.slot;
+        // Update time based on slot
+        if (selectedSlot === 'AM') {
+          selectedStartTime = '08:00';
+          selectedEndTime = '13:00';
+        } else if (selectedSlot === 'PM') {
+          selectedStartTime = '13:00';
+          selectedEndTime = '18:00';
+        } else {
+          selectedStartTime = '08:00';
+          selectedEndTime = '18:00';
+        }
+        updateTimelineSelection();
       });
     });
 
@@ -712,7 +881,10 @@
     });
 
     // Cancel
-    $('cancelBtn').addEventListener('click', closeModal);
+    $('cancelBtn').addEventListener('click', () => {
+      cleanupTimelineListeners();
+      closeModal();
+    });
 
     // Submit - 楽観的UI更新（即座にUI反映、バックグラウンド保存）
     $('submitBtn').addEventListener('click', async () => {
@@ -743,6 +915,8 @@
         start_date: startDate,
         end_date: endDate,
         slot: selectedSlot,
+        start_time: selectedStartTime,
+        end_time: selectedEndTime,
         dept_name: dept,
         worker_code: selectedWorker.worker_code,
         worker_name: selectedWorker.worker_name,
@@ -758,8 +932,8 @@
         vehicle_id: vehicle.vehicle_id,
         date: S.dateISO,
         slot: selectedSlot,
-        start_time: '',
-        end_time: '',
+        start_time: selectedStartTime,
+        end_time: selectedEndTime,
         dept_name: dept,
         worker_name: selectedWorker.worker_name,
         worker_code: selectedWorker.worker_code,
@@ -772,6 +946,7 @@
       }
 
       // モーダルを即座に閉じる
+      cleanupTimelineListeners();
       closeModal();
       toast('予約中...', `${vehicle.name}`);
       setSaveState('saving');
@@ -825,10 +1000,14 @@
     const startDateStr = slotState.start_date || slotState.date || S.dateISO;
     const endDateStr = slotState.end_date || slotState.date || S.dateISO;
 
-    let startTime = '', endTime = '';
-    if (slotState.slot === 'AM') { startTime = '08:00'; endTime = '13:00'; }
-    else if (slotState.slot === 'PM') { startTime = '13:00'; endTime = '18:00'; }
-    else if (slotState.slot === 'FULL') { startTime = '08:00'; endTime = '18:00'; }
+    // 実際の予約時間を使用（なければスロットのデフォルト時間）
+    let startTime = slotState.start_time || '';
+    let endTime = slotState.end_time || '';
+    if (!startTime || !endTime) {
+      if (slotState.slot === 'AM') { startTime = '08:00'; endTime = '13:00'; }
+      else if (slotState.slot === 'PM') { startTime = '13:00'; endTime = '18:00'; }
+      else if (slotState.slot === 'FULL') { startTime = '08:00'; endTime = '18:00'; }
+    }
 
     // 同日か複数日かで表示を変える
     let usagePeriod = '';
