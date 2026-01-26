@@ -212,20 +212,64 @@ function createReservationCore_(payload) {
     updated_by: actor,
   });
 
-  // 日別明細（全日同一slot）
-  const slotTimes = CONFIG.SLOT[slot] || { start: '', end: '' };
-  dates.forEach(dateISO => {
-    const effStart = startTime || slotTimes.start || '';
-    const effEnd = endTime || slotTimes.end || '';
+  // 日別明細
+  // 複数日予約の場合: 初日=出発時間〜18:00, 中日=終日, 最終日=08:00〜帰社時間
+  const isMultiDay = payload.is_multi_day === true || dates.length > 1;
+  const departureTime = payload.departure_time || startTime || '';
+  const returnTime = payload.return_time || endTime || '';
+  const slotTimes = CONFIG.SLOT[slot] || { start: '08:00', end: '18:00' };
+
+  dates.forEach((dateISO, idx) => {
+    let daySlot = slot;
+    let dayStartTime = '';
+    let dayEndTime = '';
+    let effStart = '';
+    let effEnd = '';
+
+    if (isMultiDay && dates.length > 1) {
+      const isFirstDay = idx === 0;
+      const isLastDay = idx === dates.length - 1;
+      const isMiddleDay = !isFirstDay && !isLastDay;
+
+      if (isFirstDay) {
+        // 初日: 出発時間 〜 18:00
+        daySlot = 'FULL';
+        dayStartTime = departureTime || '08:00';
+        dayEndTime = '18:00';
+        effStart = dayStartTime;
+        effEnd = dayEndTime;
+      } else if (isLastDay) {
+        // 最終日: 08:00 〜 帰社時間
+        daySlot = 'FULL';
+        dayStartTime = '08:00';
+        dayEndTime = returnTime || '18:00';
+        effStart = dayStartTime;
+        effEnd = dayEndTime;
+      } else {
+        // 中日: 終日
+        daySlot = 'FULL';
+        dayStartTime = '08:00';
+        dayEndTime = '18:00';
+        effStart = '08:00';
+        effEnd = '18:00';
+      }
+    } else {
+      // 単日予約
+      dayStartTime = startTime || '';
+      dayEndTime = endTime || '';
+      effStart = dayStartTime || slotTimes.start || '';
+      effEnd = dayEndTime || slotTimes.end || '';
+    }
+
     const conflictKey = `${vehicleId}|${dateISO}`;
 
     appendObject_(CONFIG.SHEETS.RES_DAYS, {
       reservation_id: reservationId,
       vehicle_id: vehicleId,
       date: dateISO,
-      slot: slot,
-      start_time: startTime || '',
-      end_time: endTime || '',
+      slot: daySlot,
+      start_time: dayStartTime,
+      end_time: dayEndTime,
       effective_start: effStart,
       effective_end: effEnd,
       conflict_key: conflictKey,

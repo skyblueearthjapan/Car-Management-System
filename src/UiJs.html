@@ -718,7 +718,15 @@
           <label>車両</label>
           <div class="input" style="background:#f5f6f8;">${escapeHtml(vehicle.name)}</div>
         </div>
-        <div class="field fullRow">
+        <div class="field">
+          <label>開始日</label>
+          <input type="date" class="input" id="startDate" value="${S.dateISO}">
+        </div>
+        <div class="field">
+          <label>終了日</label>
+          <input type="date" class="input" id="endDate" value="${S.dateISO}">
+        </div>
+        <div class="field fullRow" id="singleDayTimeSection">
           <label>時間帯</label>
           <div class="chipRow" id="slotChips">
             <button type="button" class="chip${slot === 'AM' ? ' is-active' : ''}" data-slot="AM">AM (08:00-13:00)</button>
@@ -734,13 +742,49 @@
             <div class="timeline__bar" id="timelineBar"></div>
           </div>
         </div>
-        <div class="field">
-          <label>開始日</label>
-          <input type="date" class="input" id="startDate" value="${S.dateISO}">
-        </div>
-        <div class="field">
-          <label>終了日</label>
-          <input type="date" class="input" id="endDate" value="${S.dateISO}">
+        <div class="field fullRow" id="multiDayTimeSection" style="display:none;">
+          <label>出張予約（複数日）</label>
+          <div class="note" style="margin-bottom:12px;">初日の出発時間前と、最終日の帰社時間後は他の人が予約できます。中日は終日予約となります。</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="field">
+              <label>出発時間（初日）</label>
+              <select class="input" id="departureTime">
+                <option value="08:00">08:00</option>
+                <option value="08:30">08:30</option>
+                <option value="09:00">09:00</option>
+                <option value="09:30">09:30</option>
+                <option value="10:00">10:00</option>
+                <option value="10:30">10:30</option>
+                <option value="11:00">11:00</option>
+                <option value="11:30">11:30</option>
+                <option value="12:00">12:00</option>
+                <option value="12:30">12:30</option>
+                <option value="13:00">13:00</option>
+                <option value="13:30">13:30</option>
+                <option value="14:00">14:00</option>
+                <option value="14:30">14:30</option>
+                <option value="15:00">15:00</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>帰社時間（最終日）</label>
+              <select class="input" id="returnTime">
+                <option value="12:00">12:00</option>
+                <option value="12:30">12:30</option>
+                <option value="13:00">13:00</option>
+                <option value="13:30">13:30</option>
+                <option value="14:00">14:00</option>
+                <option value="14:30">14:30</option>
+                <option value="15:00">15:00</option>
+                <option value="15:30">15:30</option>
+                <option value="16:00">16:00</option>
+                <option value="16:30">16:30</option>
+                <option value="17:00">17:00</option>
+                <option value="17:30">17:30</option>
+                <option value="18:00" selected>18:00</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="field">
           <label>部署 <span style="color:#c00;">*</span></label>
@@ -937,6 +981,29 @@
       });
     });
 
+    // Date change detection - toggle between single/multi day UI
+    const startDateInput = $('startDate');
+    const endDateInput = $('endDate');
+    const singleDaySection = $('singleDayTimeSection');
+    const multiDaySection = $('multiDayTimeSection');
+
+    function updateDateUI() {
+      const startDate = startDateInput.value;
+      const endDate = endDateInput.value;
+      const isMultiDay = startDate !== endDate && startDate && endDate && startDate < endDate;
+
+      if (isMultiDay) {
+        singleDaySection.style.display = 'none';
+        multiDaySection.style.display = 'block';
+      } else {
+        singleDaySection.style.display = 'block';
+        multiDaySection.style.display = 'none';
+      }
+    }
+
+    startDateInput.addEventListener('change', updateDateUI);
+    endDateInput.addEventListener('change', updateDateUI);
+
     // Dept -> Worker loading
     const deptSelect = $('deptSelect');
     const workerSelect = $('workerSelect');
@@ -990,6 +1057,7 @@
       const startDate = $('startDate').value;
       const endDate = $('endDate').value;
       const dept = deptSelect.value;
+      const isMultiDay = startDate !== endDate && startDate < endDate;
 
       // Validation
       if (!dept) {
@@ -1009,13 +1077,31 @@
         return;
       }
 
+      // 複数日予約の場合は出発時間・帰社時間を使用
+      let payloadSlot = selectedSlot;
+      let payloadStartTime = selectedStartTime;
+      let payloadEndTime = selectedEndTime;
+      let departureTime = '';
+      let returnTime = '';
+
+      if (isMultiDay) {
+        departureTime = $('departureTime').value;
+        returnTime = $('returnTime').value;
+        payloadSlot = 'FULL'; // 複数日は基本FULLスロット
+        payloadStartTime = departureTime;
+        payloadEndTime = returnTime;
+      }
+
       const payload = {
         vehicle_id: vehicle.vehicle_id,
         start_date: startDate,
         end_date: endDate,
-        slot: selectedSlot,
-        start_time: selectedStartTime,
-        end_time: selectedEndTime,
+        slot: payloadSlot,
+        start_time: payloadStartTime,
+        end_time: payloadEndTime,
+        departure_time: departureTime,  // 初日の出発時間
+        return_time: returnTime,        // 最終日の帰社時間
+        is_multi_day: isMultiDay,       // 複数日フラグ
         dept_name: dept,
         worker_code: selectedWorker.worker_code,
         worker_name: selectedWorker.worker_name,
