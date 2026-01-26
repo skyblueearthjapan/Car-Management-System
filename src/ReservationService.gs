@@ -33,6 +33,7 @@ function getDayReservationsJoined_(dateISO) {
         dept_name: h.dept_name,
         worker_name: h.worker_name,
         worker_code: h.worker_code,
+        memo: h.memo || '',  // メモを追加
       };
     })
     .filter(Boolean);
