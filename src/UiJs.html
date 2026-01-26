@@ -721,12 +721,18 @@
     }
 
     function determineSlotFromTime(startTime, endTime) {
-      if (startTime === '08:00' && endTime === '13:00') return 'AM';
-      if (startTime === '13:00' && endTime === '18:00') return 'PM';
-      if (startTime === '08:00' && endTime === '18:00') return 'FULL';
-      // カスタム時間の場合は最も近いスロットを選択
-      const startMin = timeToIndex(startTime) * INTERVAL + TIMELINE_START * 60;
-      if (startMin < 13 * 60) return 'AM';
+      // 時間を分に変換
+      const [startH, startM] = startTime.split(':').map(Number);
+      const [endH, endM] = endTime.split(':').map(Number);
+      const startMin = startH * 60 + startM;
+      const endMin = endH * 60 + endM;
+      const boundary = 13 * 60; // 13:00 = AM/PM境界
+
+      // AM/PM境界をまたぐ場合はFULL
+      if (startMin < boundary && endMin > boundary) return 'FULL';
+      // 完全にAM時間帯内（08:00-13:00）
+      if (endMin <= boundary) return 'AM';
+      // 完全にPM時間帯内（13:00-18:00）
       return 'PM';
     }
 
