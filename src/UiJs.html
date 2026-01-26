@@ -111,7 +111,15 @@
   // ---------------------------
   // SVG icons (5 styles)
   // ---------------------------
-  function svgIcon(style){
+  // スタイル名の正規化（van -> van_box など）
+  function normalizeStyle(style){
+    const s = String(style || '').toLowerCase();
+    if (s === 'van') return 'van_box';
+    return s;
+  }
+
+  function svgIcon(rawStyle){
+    const style = normalizeStyle(rawStyle);
     const base = `stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"`;
     switch(style){
       case 'sedan':
@@ -176,7 +184,8 @@
     }
   }
 
-  function styleTag(style){
+  function styleTag(rawStyle){
+    const style = normalizeStyle(rawStyle);
     const map = {
       sedan: 'SEDAN',
       minivan: 'MINIVAN',
@@ -322,7 +331,8 @@
   }
 
   function makeVehicleTile(vehicle, isSmall){
-    const style = String(vehicle.ui_style || '') || inferStyleByName(vehicle.name);
+    const rawStyle = String(vehicle.ui_style || '') || inferStyleByName(vehicle.name);
+    const style = normalizeStyle(rawStyle);
     const tag = styleTag(style);
 
     const { am, pm } = buildVehicleDayView(vehicle);
