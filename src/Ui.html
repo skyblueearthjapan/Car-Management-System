@@ -34,9 +34,15 @@
         <div class="grid" id="ownedGrid"></div>
       </section>
 
-      <aside class="borrowPanel" id="borrowPanel">
-        <div class="borrowPanel__title">たまに借りる車</div>
-        <div class="borrowPanel__grid" id="borrowGrid"></div>
+      <aside class="borrowPanel is-collapsed" id="borrowPanel">
+        <div class="borrowPanel__header" id="borrowPanelHeader">
+          <div class="borrowPanel__title">たまに借りる車</div>
+          <div class="borrowPanel__toggle">▲</div>
+        </div>
+        <div class="borrowPanel__content">
+          <div class="borrowPanel__warning" id="borrowWarning"></div>
+          <div class="borrowPanel__grid" id="borrowGrid"></div>
+        </div>
       </aside>
     </main>
 
