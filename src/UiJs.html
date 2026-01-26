@@ -221,24 +221,24 @@
     let am = base('AM');
     let pm = base('PM');
 
-    // FULL first
-    const full = rows.find(r => String(r.slot) === 'FULL');
-    if (full){
-      const user = `${full.dept_name}　${full.worker_name}`;
-      const detail = (full.start_time && full.end_time) ? `※ ${full.start_time}–${full.end_time}` : '';
-      am = {
-        ...am,
-        status:'ng', badge:'使用中', title:'使えません（予約あり）',
-        user, detail, reservation_id: full.reservation_id,
-        dept_name: full.dept_name, worker_name: full.worker_name,
+    // FULL first - 終日予約がある場合
+    const fullRow = rows.find(r => String(r.slot) === 'FULL');
+    if (fullRow){
+      const user = `${fullRow.dept_name}　${fullRow.worker_name}`;
+      const detail = (fullRow.start_time && fullRow.end_time) ? `※ ${fullRow.start_time}–${fullRow.end_time}` : '';
+      const fullState = {
+        slot: 'FULL',
+        status: 'ng',
+        badge: '終日使用中',
+        title: '終日使用の為、予約できません',
+        user,
+        time: '08:00–18:00',
+        detail,
+        reservation_id: fullRow.reservation_id,
+        dept_name: fullRow.dept_name,
+        worker_name: fullRow.worker_name,
       };
-      pm = {
-        ...pm,
-        status:'ng', badge:'使用中', title:'使えません（予約あり）',
-        user, detail, reservation_id: full.reservation_id,
-        dept_name: full.dept_name, worker_name: full.worker_name,
-      };
-      return { am, pm };
+      return { am: null, pm: null, full: fullState };
     }
 
     // AM/PM
@@ -265,7 +265,7 @@
       };
     }
 
-    return { am, pm };
+    return { am, pm, full: null };
   }
 
   // ---------------------------
@@ -321,12 +321,40 @@
     const style = normalizeStyle(rawStyle);
     const tag = styleTag(style);
 
-    const { am, pm } = buildVehicleDayView(vehicle);
+    const { am, pm, full } = buildVehicleDayView(vehicle);
 
     const tile = document.createElement('article');
     tile.className = 'vehicleTile' + (isSmall ? ' vehicleTile--small' : '');
     tile.dataset.style = style;
 
+    // 終日予約がある場合は異なるレイアウト
+    if (full) {
+      tile.innerHTML = `
+        <div class="vehicleTile__top">
+          <div class="vehicleIcon" aria-hidden="true">${svgIcon(style)}</div>
+          <div class="vehicleMeta">
+            <div class="vehicleName">${escapeHtml(vehicle.name || '')}</div>
+            <div class="vehicleTag">${escapeHtml(tag)}</div>
+          </div>
+        </div>
+
+        <div class="slots">
+          <button class="slotFull" data-slot="FULL">
+            <div class="slotFull__badge">${escapeHtml(full.badge)}</div>
+            <div class="slotFull__title">${escapeHtml(full.title)}</div>
+            <div class="slotFull__user">${escapeHtml(full.user)}</div>
+            <div class="slotFull__time">${escapeHtml(full.time)}</div>
+          </button>
+        </div>
+      `;
+
+      const fullBtn = tile.querySelector('[data-slot="FULL"]');
+      fullBtn.addEventListener('click', () => openDetailModal(vehicle, full));
+
+      return tile;
+    }
+
+    // 通常のAM/PM表示
     tile.innerHTML = `
       <div class="vehicleTile__top">
         <div class="vehicleIcon" aria-hidden="true">${svgIcon(style)}</div>

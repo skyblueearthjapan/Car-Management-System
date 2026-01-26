@@ -186,6 +186,29 @@ body.app{
 .slot__time{ font-size: 12px; color: var(--muted); font-weight: 950; }
 .slot__detail{ font-size: 12px; color: var(--muted); font-weight: 950; }
 
+/* 終日予約時のカード全体表示 */
+.slotFull{
+  text-align:left;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-lg);
+  padding: var(--pad-lg);
+  background: var(--ng-surface);
+  cursor:pointer;
+  display:flex; flex-direction:column; gap: 8px;
+  transition: transform .06s ease;
+}
+.slotFull:active{ transform: scale(.99); }
+.slotFull__badge{
+  font-size: 11px; font-weight: 950;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--ng-badge);
+  align-self: flex-start;
+}
+.slotFull__title{ font-size: 16px; font-weight: 950; }
+.slotFull__user{ font-size: 17px; font-weight: 950; letter-spacing:.01em; }
+.slotFull__time{ font-size: 12px; color: var(--muted); font-weight: 950; }
+
 .borrowPanel{
   position: fixed;
   right: 18px;
@@ -312,9 +335,16 @@ body.app{
   padding: 8px 12px;
   font-weight: 950;
   cursor:pointer;
+  transition: all .12s ease;
+}
+.chip:hover{
+  background: rgba(11,18,32,.06);
+  border-color: rgba(11,18,32,.16);
 }
 .chip.is-active{
-  border-color: rgba(11,18,32,.20);
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
   box-shadow: var(--shadow);
 }
 
