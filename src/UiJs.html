@@ -110,65 +110,13 @@
   }
 
   // ---------------------------
-  // SVG icons (5 styles)
+  // SVG icons (ILLUST-BOX like, 5 styles)
   // ---------------------------
-  // スタイル名の正規化（van -> van_box など）
   function normalizeStyle(style){
     const s = String(style || '').toLowerCase();
-    if (s === 'van') return 'van_box';
+    // 過去互換：van_box が残ってても吸収
+    if (s === 'van_box') return 'van';
     return s;
-  }
-
-  function svgIcon(rawStyle){
-    const style = normalizeStyle(rawStyle);
-    // 塗りつぶしシルエットスタイル
-    switch(style){
-      case 'sedan':
-        return '<svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">' +
-          '<path fill="currentColor" d="M10 35 L10 28 C10 26 11 25 13 25 L23 25 L30 15 C32 12 35 12 38 12 L62 12 C65 12 68 12 70 15 L77 25 L87 25 C89 25 90 26 90 28 L90 35 C90 37 89 38 87 38 L13 38 C11 38 10 37 10 35 Z"/>' +
-          '<circle cx="25" cy="38" r="8" fill="#fff"/><circle cx="25" cy="38" r="4" fill="currentColor"/>' +
-          '<circle cx="75" cy="38" r="8" fill="#fff"/><circle cx="75" cy="38" r="4" fill="currentColor"/>' +
-          '<path fill="#fff" opacity="0.35" d="M33 15 L40 25 L60 25 L67 15 C64 13 62 13 62 13 L38 13 C38 13 36 13 33 15 Z"/>' +
-          '</svg>';
-      case 'van_box':
-        return '<svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">' +
-          '<path fill="currentColor" d="M8 35 L8 16 C8 12 10 10 14 10 L70 10 C78 10 82 12 85 18 L92 30 L92 35 C92 37 91 38 89 38 L11 38 C9 38 8 37 8 35 Z"/>' +
-          '<circle cx="23" cy="38" r="8" fill="#fff"/><circle cx="23" cy="38" r="4" fill="currentColor"/>' +
-          '<circle cx="77" cy="38" r="8" fill="#fff"/><circle cx="77" cy="38" r="4" fill="currentColor"/>' +
-          '<rect x="12" y="14" width="14" height="14" rx="2" fill="#fff" opacity="0.35"/>' +
-          '<rect x="29" y="14" width="14" height="14" rx="2" fill="#fff" opacity="0.35"/>' +
-          '<path fill="#fff" opacity="0.35" d="M74 14 L86 30 L74 30 Z"/>' +
-          '</svg>';
-      case 'minivan':
-        return '<svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">' +
-          '<path fill="currentColor" d="M8 35 L8 18 C8 12 12 10 18 10 L72 10 C82 10 86 14 88 22 L94 32 L94 35 C94 37 93 38 91 38 L11 38 C9 38 8 37 8 35 Z"/>' +
-          '<circle cx="24" cy="38" r="8" fill="#fff"/><circle cx="24" cy="38" r="4" fill="currentColor"/>' +
-          '<circle cx="76" cy="38" r="8" fill="#fff"/><circle cx="76" cy="38" r="4" fill="currentColor"/>' +
-          '<rect x="14" y="14" width="13" height="16" rx="2" fill="#fff" opacity="0.35"/>' +
-          '<rect x="30" y="14" width="13" height="16" rx="2" fill="#fff" opacity="0.35"/>' +
-          '<rect x="46" y="14" width="13" height="16" rx="2" fill="#fff" opacity="0.35"/>' +
-          '<path fill="#fff" opacity="0.35" d="M76 14 L90 32 L76 32 Z"/>' +
-          '</svg>';
-      case 'kei_truck':
-        return '<svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">' +
-          '<rect fill="currentColor" x="6" y="22" width="42" height="16" rx="2"/>' +
-          '<path fill="#fff" opacity="0.12" d="M9 24 L45 24 L45 36 L9 36 Z"/>' +
-          '<path fill="currentColor" d="M48 35 L48 18 C48 14 52 12 56 12 L68 12 C76 12 80 14 84 20 L94 32 L94 35 C94 37 93 38 91 38 L51 38 C49 38 48 37 48 35 Z"/>' +
-          '<circle cx="22" cy="38" r="8" fill="#fff"/><circle cx="22" cy="38" r="4" fill="currentColor"/>' +
-          '<circle cx="78" cy="38" r="8" fill="#fff"/><circle cx="78" cy="38" r="4" fill="currentColor"/>' +
-          '<path fill="#fff" opacity="0.35" d="M52 16 C52 14 54 13 56 13 L68 13 C72 13 76 15 78 18 L86 30 L52 30 Z"/>' +
-          '</svg>';
-      case 'suv':
-        return '<svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">' +
-          '<path fill="currentColor" d="M8 36 L8 20 C8 16 10 14 14 14 L26 14 L32 8 C34 6 36 6 40 6 L70 6 C74 6 76 8 76 12 L76 14 L86 14 C90 14 92 16 92 20 L92 36 C92 38 91 40 88 40 L12 40 C9 40 8 38 8 36 Z"/>' +
-          '<circle cx="24" cy="40" r="10" fill="#fff"/><circle cx="24" cy="40" r="5" fill="currentColor"/>' +
-          '<circle cx="76" cy="40" r="10" fill="#fff"/><circle cx="76" cy="40" r="5" fill="currentColor"/>' +
-          '<path fill="#fff" opacity="0.35" d="M30 14 L34 9 C35 8 37 8 40 8 L56 8 L56 26 L30 26 Z"/>' +
-          '<rect fill="#fff" opacity="0.35" x="60" y="8" width="14" height="18" rx="2"/>' +
-          '</svg>';
-      default:
-        return svgIcon('sedan');
-    }
   }
 
   function styleTag(rawStyle){
@@ -176,7 +124,7 @@
     const map = {
       sedan: 'SEDAN',
       minivan: 'MINIVAN',
-      van_box: 'VAN',
+      van: 'VAN',
       kei_truck: 'KEI TRUCK',
       suv: 'SUV',
     };
@@ -186,11 +134,162 @@
   function inferStyleByName(name){
     const n = String(name || '');
     if (n.includes('軽トラ')) return 'kei_truck';
-    if (n.includes('ハイエース')) return 'van_box';
+    if (n.includes('ハイエース')) return 'van';
     if (n.includes('ノア')) return 'minivan';
     if (n.includes('CX')) return 'suv';
     if (n.includes('カローラ')) return 'sedan';
     return 'sedan';
+  }
+
+  /**
+   * ILLUST-BOX like silhouette:
+   * - body: currentColor fill
+   * - window: white with opacity
+   * - wheels: white ring + body center
+   * viewBox: 0 0 120 60
+   */
+  function svgIcon(rawStyle){
+    const style = normalizeStyle(rawStyle);
+    const wheel = (cx) => `
+      <circle cx="${cx}" cy="48" r="10" fill="#fff"/>
+      <circle cx="${cx}" cy="48" r="5" fill="currentColor"/>
+    `;
+    const glass = (d) => `<path d="${d}" fill="#fff" opacity="0.35"/>`;
+    const wrect = (x,y,w,h,r=3) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="#fff" opacity="0.35"/>`;
+
+    switch(style){
+
+      // --- SEDAN (カローラなど)
+      case 'sedan':
+        return `
+        <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path fill="currentColor" d="
+            M14 44
+            V36
+            C14 33 16 31 19 31
+            H32
+            L40 20
+            C42 17 45 16 49 16
+            H74
+            C78 16 81 17 83 20
+            L90 31
+            H101
+            C104 31 106 33 106 36
+            V44
+            C106 46 104 48 102 48
+            H18
+            C16 48 14 46 14 44
+            Z" />
+          ${glass("M43 21 L50 31 H70 L79 21 C77 19 75 19 74 19 H49 C47 19 45 19 43 21 Z")}
+          ${wheel(34)}
+          ${wheel(86)}
+        </svg>`;
+
+      // --- MINIVAN (ノアなど) : 背が高く窓3枚
+      case 'minivan':
+        return `
+        <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path fill="currentColor" d="
+            M12 44
+            V26
+            C12 21 16 18 22 18
+            H78
+            C90 18 96 22 99 30
+            L108 40
+            V44
+            C108 46 106 48 104 48
+            H16
+            C14 48 12 46 12 44
+            Z" />
+          ${wrect(22,23,16,16,3)}
+          ${wrect(41,23,16,16,3)}
+          ${wrect(60,23,16,16,3)}
+          ${glass("M80 22 L100 40 H80 Z")}
+          ${wheel(34)}
+          ${wheel(86)}
+        </svg>`;
+
+      // --- VAN (ハイエース) : 箱型・後ろ角・窓2枚＋前面ガラス
+      case 'van':
+        return `
+        <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path fill="currentColor" d="
+            M10 44
+            V20
+            C10 16 13 14 18 14
+            H82
+            C96 14 103 18 106 28
+            L112 40
+            V44
+            C112 46 110 48 108 48
+            H14
+            C12 48 10 46 10 44
+            Z" />
+          ${wrect(18,20,16,16,3)}
+          ${wrect(37,20,16,16,3)}
+          ${glass("M86 18 L106 40 H86 Z")}
+          ${wheel(32)}
+          ${wheel(90)}
+        </svg>`;
+
+      // --- KEI TRUCK (軽トラ) : 荷台＋キャブ分離
+      case 'kei_truck':
+        return `
+        <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- bed -->
+          <rect x="8" y="30" width="52" height="14" rx="3" fill="currentColor"/>
+          <rect x="12" y="32" width="44" height="10" rx="2" fill="#fff" opacity="0.10"/>
+          <!-- cabin -->
+          <path fill="currentColor" d="
+            M60 44
+            V26
+            C60 22 64 20 69 20
+            H84
+            C93 20 98 22 102 28
+            L112 40
+            V44
+            C112 46 110 48 108 48
+            H64
+            C62 48 60 46 60 44
+            Z"/>
+          ${glass("M66 24 C66 22.5 67.5 22 69 22 H84 C89 22 93 24 96 28 L104 40 H66 Z")}
+          ${wheel(28)}
+          ${wheel(92)}
+        </svg>`;
+
+      // --- SUV (CX5) : 車高高め・タイヤ大きめ・窓2枚
+      case 'suv':
+        return `
+        <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path fill="currentColor" d="
+            M12 44
+            V30
+            C12 26 15 24 19 24
+            H34
+            L44 14
+            C46 12 49 12 53 12
+            H82
+            C88 12 92 15 92 20
+            V24
+            H103
+            C107 24 110 27 110 31
+            V44
+            C110 46 108 48 106 48
+            H16
+            C14 48 12 46 12 44
+            Z"/>
+          ${glass("M40 24 L46 17 C47 16 49 16 53 16 H67 V36 H40 Z")}
+          <rect x="71" y="16" width="16" height="20" rx="3" fill="#fff" opacity="0.35"/>
+          <!-- SUV wheels slightly bigger -->
+          <circle cx="34" cy="48" r="11" fill="#fff"/>
+          <circle cx="34" cy="48" r="6" fill="currentColor"/>
+          <circle cx="88" cy="48" r="11" fill="#fff"/>
+          <circle cx="88" cy="48" r="6" fill="currentColor"/>
+        </svg>`;
+
+      default:
+        return svgIcon('sedan');
+    }
   }
 
   // ---------------------------

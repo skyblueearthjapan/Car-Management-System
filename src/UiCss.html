@@ -119,7 +119,7 @@ body.app{
 .vehicleTile{
   background: var(--card);
   border: 1px solid var(--hair);
-  border-radius: var(--r-xl);
+  border-radius: 26px;
   padding: var(--pad-lg);
   box-shadow: var(--shadow);
   display:flex;
@@ -134,9 +134,9 @@ body.app{
 }
 
 .vehicleIcon{
-  width: 120px;
-  height: 72px;
-  color: rgba(11,18,32,.86);
+  width: 132px;
+  height: 78px;
+  color: rgba(11,18,32,.82);
   flex: 0 0 auto;
 }
 
@@ -158,7 +158,7 @@ body.app{
 .slot{
   text-align:left;
   border: 1px solid var(--hair);
-  border-radius: var(--r-lg);
+  border-radius: 18px;
   padding: var(--pad-md);
   background: #fff;
   cursor:pointer;
@@ -189,24 +189,24 @@ body.app{
 /* 終日予約時のカード全体表示 */
 .slotFull{
   text-align:left;
-  border: 1px solid var(--hair);
+  border: 1px solid rgba(240,70,70,.18);
   border-radius: var(--r-lg);
-  padding: var(--pad-lg);
-  background: var(--ng-surface);
+  padding: 16px;
+  background: rgba(240,70,70,.10);
   cursor:pointer;
-  display:flex; flex-direction:column; gap: 8px;
+  display:flex; flex-direction:column; gap: 10px;
   transition: transform .06s ease;
 }
 .slotFull:active{ transform: scale(.99); }
 .slotFull__badge{
+  align-self: flex-start;
   font-size: 11px; font-weight: 950;
   padding: 4px 10px;
   border-radius: 999px;
-  background: var(--ng-badge);
-  align-self: flex-start;
+  background: rgba(240,70,70,.16);
 }
-.slotFull__title{ font-size: 16px; font-weight: 950; }
-.slotFull__user{ font-size: 17px; font-weight: 950; letter-spacing:.01em; }
+.slotFull__title{ font-size: 15px; font-weight: 950; }
+.slotFull__user{ font-size: 18px; font-weight: 950; letter-spacing:.01em; }
 .slotFull__time{ font-size: 12px; color: var(--muted); font-weight: 950; }
 
 .borrowPanel{
@@ -245,24 +245,34 @@ body.app{
   font-size: 12px;
   color: var(--muted);
 }
-.borrowPanel__toggle{
-  font-size: 10px;
+.borrowPanel__chev{
+  font-weight: 950;
   color: var(--muted);
   transition: transform .2s ease;
 }
-.borrowPanel.is-collapsed .borrowPanel__toggle{
+.borrowPanel.is-collapsed .borrowPanel__chev{
   transform: rotate(180deg);
 }
-.borrowPanel__content{
-  padding: 0 14px 14px;
+.borrowPanel__warning{
+  background: rgba(255, 186, 0, .12);
+  border: 1px solid rgba(255, 186, 0, .22);
+  border-radius: 16px;
+  padding: 10px 12px;
+  color: rgba(11,18,32,.78);
+  font-weight: 950;
+  font-size: 12px;
+  margin: 0 14px 10px;
+  line-height: 1.5;
 }
-.borrowPanel.is-collapsed .borrowPanel__content{
+.borrowPanel.is-collapsed .borrowPanel__grid,
+.borrowPanel.is-collapsed .borrowPanel__warning{
   display: none;
 }
 .borrowPanel__grid{
   display:grid;
   grid-template-columns: repeat(3, minmax(0,1fr));
   gap: 10px;
+  padding: 0 14px 14px;
 }
 
 /* 車両カードの警告オーバーレイ */
@@ -273,7 +283,7 @@ body.app{
   position: absolute;
   inset: 0;
   background: rgba(255, 180, 0, .95);
-  border-radius: var(--r-xl);
+  border-radius: 26px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -308,11 +318,11 @@ body.app{
 }
 
 .vehicleTile--small{
-  border-radius: var(--r-xl);
+  border-radius: 26px;
   padding: 12px;
   box-shadow: none;
 }
-.vehicleTile--small .vehicleIcon{ width: 92px; height: 56px; }
+.vehicleTile--small .vehicleIcon{ width: 102px; height: 60px; }
 .vehicleTile--small .vehicleName{ font-size: 14px; }
 .vehicleTile--small .slots{ gap: 8px; }
 .vehicleTile--small .slot{ padding: 10px; border-radius: var(--r-md); }
@@ -441,9 +451,10 @@ body.app{
 }
 
 .detailRow{
-  display: flex;
-  gap: 8px;
-  padding: 8px 0;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  padding: 10px 0;
   border-bottom: 1px solid var(--hair);
 }
 .detailRow:last-child{ border-bottom: none; }
@@ -451,10 +462,10 @@ body.app{
   font-size: 12px;
   font-weight: 950;
   color: var(--muted);
-  min-width: 80px;
+  letter-spacing: .08em;
 }
 .detailValue{
-  font-weight: 850;
+  font-weight: 950;
 }
 
 .btn--danger{
