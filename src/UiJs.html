@@ -1154,8 +1154,9 @@
     setSaveState('saving');
     try{
       const res = await apiGetDay(S.dateISO);
-      if (!res.ok){
-        toast('エラー', res.message || '当日データ取得に失敗');
+      if (!res || !res.ok){
+        toast('エラー', res?.message || '当日データ取得に失敗');
+        console.error('reloadDay failed:', res);
         return;
       }
       S.dayReservations = res.data.dayReservations || [];
@@ -1183,8 +1184,9 @@
     try{
       const todayISO = dateToISO(new Date());
       const res = await apiInit(todayISO);
-      if (!res.ok){
-        toast('エラー', res.message || '初期化に失敗');
+      if (!res || !res.ok){
+        toast('エラー', res?.message || '初期化に失敗しました。ページを再読み込みしてください。');
+        console.error('boot failed:', res);
         return;
       }
       const data = res.data;
@@ -1198,6 +1200,7 @@
       toast('準備完了', '当日の予約状況を表示しました');
     } catch(e){
       toast('エラー', String(e?.message || e));
+      console.error('boot error:', e);
     } finally {
       setSaveState('saved');
     }
