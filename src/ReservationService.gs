@@ -26,7 +26,7 @@ function getDayReservationsJoined_(dateISO) {
       return {
         reservation_id: d.reservation_id,
         vehicle_id: h.vehicle_id,
-        date: d.date,
+        date: normalizeToISO_(d.date),  // 日付を YYYY-MM-DD 形式に正規化
         slot: d.slot,
         start_time: d.start_time || '',
         end_time: d.end_time || '',

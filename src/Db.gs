@@ -20,20 +20,15 @@ function findHeaderRow_(sheet) {
 
   for (let row = 1; row <= maxSearch; row++) {
     const values = sheet.getRange(row, 1, 1, lastCol).getValues()[0];
-
-    // 2番目以降のセルにも値があるかチェック（説明文行をスキップ）
-    const secondCellHasValue = values.length > 1 && values[1] && String(values[1]).trim() !== '';
-    if (!secondCellHasValue) continue;
-
-    // 既知のヘッダーキーワードを探す
     const str = values.map(v => String(v).toLowerCase()).join('|');
+    // 既知のヘッダーキーワードを探す
     if (str.includes('vehicle_id') || str.includes('reservation_id') ||
         str.includes('dept_name') || str.includes('worker_code') ||
         str.includes('queue_id') || str.includes('sync_id')) {
       return row;
     }
   }
-  return 1;
+  return 1; // デフォルト
 }
 
 function headerMap_(sheet, headerRow) {
