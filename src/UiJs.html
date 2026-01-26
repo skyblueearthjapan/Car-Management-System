@@ -534,10 +534,10 @@
         }
       }
 
-      // 空き時間スロットを計算（部分予約の場合のみ）
+      // 空き時間スロットを計算（当日の時間に基づいて）
       const availableSlots = [];
-      if (full.start_time && full.end_time && full.start_date === full.end_date) {
-        // 当日の部分予約の場合のみ空き時間を表示
+      if (full.start_time && full.end_time) {
+        // 当日の予約時間に基づいて空き時間を表示（複数日予約でも各日の時間で判定）
         if (full.start_time !== '08:00') {
           availableSlots.push({ start: '08:00', end: full.start_time, label: `08:00–${full.start_time}` });
         }
