@@ -325,28 +325,68 @@
     let am = base('AM');
     let pm = base('PM');
 
+    // Helper: 時間文字列をHH:MM形式に正規化
+    function normalizeTimeStr(t) {
+      if (!t) return '';
+      // ISO形式 "1899-12-30T11:00:00.000Z" や "2026-01-26T08:00:00.000Z" からHH:MMを抽出
+      if (typeof t === 'string' && t.includes('T')) {
+        const match = t.match(/T(\d{2}:\d{2})/);
+        if (match) return match[1];
+      }
+      // "HH:MM" 形式ならそのまま
+      if (typeof t === 'string' && /^\d{2}:\d{2}$/.test(t)) {
+        return t;
+      }
+      return String(t);
+    }
+
     // Helper: 予約時間の表示文字列を生成
     function getTimeDisplay(row, defaultTime) {
-      if (row.start_time && row.end_time) {
-        return `${row.start_time}–${row.end_time}`;
+      const startT = normalizeTimeStr(row.start_time);
+      const endT = normalizeTimeStr(row.end_time);
+      if (startT && endT) {
+        return `${startT}–${endT}`;
       }
       return defaultTime;
+    }
+
+    // Helper: 空き時間を計算
+    function getAvailableTime(startT, endT) {
+      const s = normalizeTimeStr(startT);
+      const e = normalizeTimeStr(endT);
+      if (!s || !e) return '';
+
+      const available = [];
+      if (s !== '08:00') {
+        available.push(`08:00–${s}`);
+      }
+      if (e !== '18:00') {
+        available.push(`${e}–18:00`);
+      }
+      return available.length > 0 ? available.join(', ') + ' 使用可能' : '';
     }
 
     // FULL first - 終日予約がある場合
     const fullRow = rows.find(r => String(r.slot) === 'FULL');
     if (fullRow){
       const user = `${fullRow.dept_name}　${fullRow.worker_name}`;
+      const timeDisplay = getTimeDisplay(fullRow, '08:00–18:00');
+      const availableTime = getAvailableTime(fullRow.start_time, fullRow.end_time);
+
+      // 時間帯予約の場合は空き時間を表示
+      const hasCustomTime = normalizeTimeStr(fullRow.start_time) && normalizeTimeStr(fullRow.end_time);
+      const isFullDay = !hasCustomTime || (normalizeTimeStr(fullRow.start_time) === '08:00' && normalizeTimeStr(fullRow.end_time) === '18:00');
+
       const fullState = {
         slot: 'FULL',
         status: 'ng',
-        badge: '終日使用中',
-        title: '終日使用の為、予約できません',
+        badge: isFullDay ? '終日使用中' : '時間帯使用中',
+        title: isFullDay ? '終日使用の為、予約できません' : `${timeDisplay} 使用中`,
         user,
-        time: getTimeDisplay(fullRow, '08:00–18:00'),
-        start_time: fullRow.start_time || '',
-        end_time: fullRow.end_time || '',
-        detail: '',
+        time: timeDisplay,
+        start_time: normalizeTimeStr(fullRow.start_time) || '',
+        end_time: normalizeTimeStr(fullRow.end_time) || '',
+        detail: availableTime,
         reservation_id: fullRow.reservation_id,
         dept_name: fullRow.dept_name,
         worker_name: fullRow.worker_name,
@@ -366,8 +406,8 @@
         status:'ng', badge:'使用中', title:'使えません（予約あり）',
         user: `${amRow.dept_name}　${amRow.worker_name}`,
         time: getTimeDisplay(amRow, SLOT_TIME['AM']),
-        start_time: amRow.start_time || '',
-        end_time: amRow.end_time || '',
+        start_time: normalizeTimeStr(amRow.start_time) || '',
+        end_time: normalizeTimeStr(amRow.end_time) || '',
         detail: '',
         reservation_id: amRow.reservation_id,
         dept_name: amRow.dept_name, worker_name: amRow.worker_name,
@@ -384,8 +424,8 @@
         status:'ng', badge:'使用中', title:'使えません（予約あり）',
         user: `${pmRow.dept_name}　${pmRow.worker_name}`,
         time: getTimeDisplay(pmRow, SLOT_TIME['PM']),
-        start_time: pmRow.start_time || '',
-        end_time: pmRow.end_time || '',
+        start_time: normalizeTimeStr(pmRow.start_time) || '',
+        end_time: normalizeTimeStr(pmRow.end_time) || '',
         detail: '',
         reservation_id: pmRow.reservation_id,
         dept_name: pmRow.dept_name, worker_name: pmRow.worker_name,
