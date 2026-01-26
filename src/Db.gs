@@ -11,6 +11,7 @@ function sh_(name) {
 
 /**
  * ヘッダー行を探す（vehicle_id, reservation_id などを含む行）
+ * 説明文ではなく、実際のカラム名が並んでいる行を検出
  * 見つからなければ1を返す
  */
 function findHeaderRow_(sheet) {
@@ -20,15 +21,29 @@ function findHeaderRow_(sheet) {
 
   for (let row = 1; row <= maxSearch; row++) {
     const values = sheet.getRange(row, 1, 1, lastCol).getValues()[0];
-    const str = values.map(v => String(v).toLowerCase()).join('|');
-    // 既知のヘッダーキーワードを探す
-    if (str.includes('vehicle_id') || str.includes('reservation_id') ||
-        str.includes('dept_name') || str.includes('worker_code') ||
-        str.includes('queue_id') || str.includes('sync_id')) {
+
+    // 複数のセルに値があるかチェック（説明文は1セルだけに長い文章が入る）
+    const nonEmptyCells = values.filter(v => v !== null && v !== undefined && String(v).trim() !== '');
+    if (nonEmptyCells.length < 3) continue;
+
+    // 各セルの値が短い（カラム名は通常30文字以内）
+    const shortValues = nonEmptyCells.filter(v => String(v).length <= 30);
+    if (shortValues.length < 3) continue;
+
+    // 既知のヘッダーキーワードを含むセルがあるか（完全一致）
+    const hasHeaderKeyword = values.some(v => {
+      const s = String(v).toLowerCase().trim();
+      return s === 'vehicle_id' || s === 'reservation_id' ||
+             s === 'dept_name' || s === 'worker_code' ||
+             s === 'queue_id' || s === 'sync_id' ||
+             s === 'date' || s === 'slot' || s === 'status';
+    });
+
+    if (hasHeaderKeyword) {
       return row;
     }
   }
-  return 1; // デフォルト
+  return 1;
 }
 
 function headerMap_(sheet, headerRow) {
