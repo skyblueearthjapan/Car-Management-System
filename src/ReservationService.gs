@@ -9,7 +9,8 @@ function getActiveVehicles_() {
 
 function getDayReservationsJoined_(dateISO) {
   // ReservationDays(date=) を引いて Reservations とJOIN、cancelledは除外
-  const days = readAllObjects_(CONFIG.SHEETS.RES_DAYS).filter(r => String(r.date) === String(dateISO));
+  const targetDate = normalizeToISO_(dateISO);
+  const days = readAllObjects_(CONFIG.SHEETS.RES_DAYS).filter(r => normalizeToISO_(r.date) === targetDate);
   if (days.length === 0) return [];
 
   // ヘッダを一括読み（シンプルに全件 → 今後最適化可）

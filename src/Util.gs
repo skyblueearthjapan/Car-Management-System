@@ -66,3 +66,22 @@ function normalizeTimeRange_(slot, startTime, endTime) {
   }
   return { s, e, label: `${startTime}–${endTime}` };
 }
+
+/**
+ * Date型または文字列をISO形式(YYYY-MM-DD)に正規化
+ */
+function normalizeToISO_(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    return toISODate_(val);
+  }
+  const s = String(val);
+  // 既にISO形式ならそのまま
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // Date文字列（例："Mon Jan 26 2026..."）をパース
+  const d = new Date(val);
+  if (!isNaN(d.getTime())) {
+    return toISODate_(d);
+  }
+  return s;
+}

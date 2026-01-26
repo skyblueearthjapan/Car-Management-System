@@ -496,7 +496,7 @@
     // Cancel
     $('cancelBtn').addEventListener('click', closeModal);
 
-    // Submit
+    // Submit - 楽観的UI更新（即座にUI反映、バックグラウンド保存）
     $('submitBtn').addEventListener('click', async () => {
       const startDate = $('startDate').value;
       const endDate = $('endDate').value;
@@ -533,39 +533,58 @@
         source_id: '',
       };
 
-      setSaveState('saving');
-      $('submitBtn').disabled = true;
-      $('submitBtn').textContent = '保存中...';
+      // 楽観的更新: 即座にUIに反映
+      const tempId = 'TEMP_' + Date.now();
+      const optimisticReservation = {
+        reservation_id: tempId,
+        vehicle_id: vehicle.vehicle_id,
+        date: S.dateISO,
+        slot: selectedSlot,
+        start_time: '',
+        end_time: '',
+        dept_name: dept,
+        worker_name: selectedWorker.worker_name,
+        worker_code: selectedWorker.worker_code,
+      };
 
+      // 当日の場合のみ即座にUI更新
+      if (startDate <= S.dateISO && endDate >= S.dateISO) {
+        S.dayReservations.push(optimisticReservation);
+        renderVehicles();
+      }
+
+      // モーダルを即座に閉じる
+      closeModal();
+      toast('予約中...', `${vehicle.name}`);
+      setSaveState('saving');
+
+      // バックグラウンドで保存
       try {
         const res = await apiCreateReservation(payload);
         if (res.ok) {
+          // 成功: 仮IDを実際のIDに置換（次回リロード時に反映）
           toast('予約完了', `${vehicle.name} を予約しました`);
-          closeModal();
+          // サーバーから最新データを取得して同期
           await reloadDay();
         } else if (res.code === 'CONFLICT') {
-          // Show conflict info
+          // 競合: 楽観的更新をロールバック
+          S.dayReservations = S.dayReservations.filter(r => r.reservation_id !== tempId);
+          renderVehicles();
           const conflicts = res.conflicts || [];
-          const conflictHtml = `
-            <div class="danger">
-              <b>予約が競合しています</b>
-              <ul class="list">
-                ${conflicts.map(c => `<li>${escapeHtml(c.date)} ${escapeHtml(c.slot)}：${escapeHtml(c.existing_dept)} ${escapeHtml(c.existing_name)}</li>`).join('')}
-              </ul>
-            </div>
-          `;
-          $('conflictArea').innerHTML = conflictHtml;
-          $('conflictArea').style.display = 'block';
-          toast('競合エラー', '既に予約があります');
+          toast('競合エラー', `${conflicts.map(c => `${c.existing_dept} ${c.existing_name}`).join(', ')} が既に予約済み`);
         } else {
+          // エラー: ロールバック
+          S.dayReservations = S.dayReservations.filter(r => r.reservation_id !== tempId);
+          renderVehicles();
           toast('エラー', res.message || '予約に失敗しました');
         }
       } catch (e) {
+        // エラー: ロールバック
+        S.dayReservations = S.dayReservations.filter(r => r.reservation_id !== tempId);
+        renderVehicles();
         toast('エラー', e.message || '予約に失敗しました');
       } finally {
         setSaveState('saved');
-        $('submitBtn').disabled = false;
-        $('submitBtn').textContent = '予約する';
       }
     });
   }
@@ -611,28 +630,42 @@
 
     $('closeDetailBtn').addEventListener('click', closeModal);
 
+    // 楽観的UI更新で即座に取消を反映
     $('cancelReservationBtn').addEventListener('click', async () => {
       if (!confirm('この予約を取り消しますか？')) return;
 
-      setSaveState('saving');
-      $('cancelReservationBtn').disabled = true;
-      $('cancelReservationBtn').textContent = '処理中...';
+      const reservationId = slotState.reservation_id;
 
+      // 楽観的更新: 即座にUIから削除
+      const backup = [...S.dayReservations];
+      S.dayReservations = S.dayReservations.filter(r => r.reservation_id !== reservationId);
+
+      // モーダルを即座に閉じてUI更新
+      closeModal();
+      renderVehicles();
+      toast('取消中...', '');
+      setSaveState('saving');
+
+      // バックグラウンドで削除
       try {
-        const res = await apiCancelReservation(slotState.reservation_id);
+        const res = await apiCancelReservation(reservationId);
         if (res.ok) {
           toast('取消完了', '予約を取り消しました');
-          closeModal();
+          // サーバーと同期
           await reloadDay();
         } else {
+          // エラー: ロールバック
+          S.dayReservations = backup;
+          renderVehicles();
           toast('エラー', res.message || '取消に失敗しました');
         }
       } catch (e) {
+        // エラー: ロールバック
+        S.dayReservations = backup;
+        renderVehicles();
         toast('エラー', e.message || '取消に失敗しました');
       } finally {
         setSaveState('saved');
-        $('cancelReservationBtn').disabled = false;
-        $('cancelReservationBtn').textContent = '予約取消';
       }
     });
   }
