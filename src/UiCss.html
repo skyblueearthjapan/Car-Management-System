@@ -60,10 +60,20 @@ body.app{
   display:grid; gap:2px;
   cursor:pointer;
   user-select:none;
+  transition: all .15s ease;
+}
+.dayTab:hover{
+  background: rgba(11,18,32,.04);
+  border-color: rgba(11,18,32,.16);
+  transform: translateY(-1px);
 }
 .dayTab.is-active{
-  box-shadow: var(--shadow);
-  border-color: rgba(11,18,32,.18);
+  background: rgba(18, 120, 220, .12);
+  border-color: rgba(18, 120, 220, .35);
+  box-shadow: 0 4px 12px rgba(18, 120, 220, .15);
+}
+.dayTab.is-active:hover{
+  background: rgba(18, 120, 220, .18);
 }
 .dayTab__date{ font-weight: 950; font-size: 14px; }
 .dayTab__dow{ font-size: 11px; color: var(--muted); }
