@@ -213,7 +213,7 @@ body.app{
   position: fixed;
   right: 18px;
   bottom: 18px;
-  width: 420px;
+  width: 580px;
   max-width: calc(100vw - 36px);
   background: rgba(255,255,255,.92);
   backdrop-filter: blur(10px);
@@ -261,18 +261,50 @@ body.app{
 }
 .borrowPanel__grid{
   display:grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
+  grid-template-columns: repeat(3, minmax(0,1fr));
   gap: 10px;
 }
-.borrowPanel__warning{
-  background: rgba(255, 180, 0, .15);
-  border: 1px solid rgba(255, 180, 0, .3);
-  border-radius: 12px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
+
+/* 車両カードの警告オーバーレイ */
+.vehicleTile--small{
+  position: relative;
+}
+.vehicleWarningOverlay{
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 180, 0, .95);
+  border-radius: var(--r-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  text-align: center;
+  z-index: 10;
+}
+.vehicleWarningOverlay__icon{
+  font-size: 24px;
+}
+.vehicleWarningOverlay__text{
   font-size: 12px;
-  font-weight: 850;
-  color: #8a6d00;
+  font-weight: 950;
+  color: #5a4500;
+  line-height: 1.5;
+}
+.vehicleWarningOverlay__btn{
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.1);
+  border-radius: 999px;
+  padding: 8px 20px;
+  font-weight: 950;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .12s ease;
+}
+.vehicleWarningOverlay__btn:hover{
+  background: #f5f5f5;
+  box-shadow: var(--shadow);
 }
 
 .vehicleTile--small{

@@ -10,6 +10,7 @@
     dayReservations: [],
     deptList: [],
     workersCache: new Map(), // dept -> workers[]
+    confirmedVehicles: new Set(), // 警告確認済みの車両ID
   };
 
   // ---------------------------
@@ -314,9 +315,6 @@
 
     owned.forEach(v => ownedGrid.appendChild(makeVehicleTile(v, false)));
     borrow.forEach(v => borrowGrid.appendChild(makeVehicleTile(v, true)));
-
-    // 借りる車の注意メッセージを更新
-    updateBorrowWarning();
   }
 
   // 車両ごとの注意メッセージ
@@ -325,22 +323,6 @@
     'カローラシルバー': '木下部長に必ず確認して下さい！',
     'CX5': 'TSC担当者に必ず確認して下さい！',
   };
-
-  function updateBorrowWarning(){
-    const warningEl = $('borrowWarning');
-    const borrow = S.vehicles.filter(v => String(v.category) === 'borrowable');
-
-    const warnings = borrow
-      .map(v => VEHICLE_WARNINGS[v.name])
-      .filter(Boolean);
-
-    if (warnings.length > 0) {
-      warningEl.innerHTML = warnings.map(w => `⚠️ ${escapeHtml(w)}`).join('<br>');
-      warningEl.style.display = 'block';
-    } else {
-      warningEl.style.display = 'none';
-    }
-  }
 
   // たまに借りる車パネルのトグル
   $('borrowPanelHeader').addEventListener('click', () => {
@@ -359,9 +341,21 @@
     tile.className = 'vehicleTile' + (isSmall ? ' vehicleTile--small' : '');
     tile.dataset.style = style;
 
+    // 警告オーバーレイ（borrowableで警告がある車両のみ）
+    const warningMsg = VEHICLE_WARNINGS[vehicle.name];
+    const needsWarning = isSmall && warningMsg && !S.confirmedVehicles.has(vehicle.vehicle_id);
+    const warningOverlayHtml = needsWarning ? `
+      <div class="vehicleWarningOverlay" data-vehicle-id="${escapeHtml(vehicle.vehicle_id)}">
+        <div class="vehicleWarningOverlay__icon">⚠️</div>
+        <div class="vehicleWarningOverlay__text">${escapeHtml(warningMsg)}</div>
+        <button class="vehicleWarningOverlay__btn" type="button">確認</button>
+      </div>
+    ` : '';
+
     // 終日予約がある場合は異なるレイアウト
     if (full) {
       tile.innerHTML = `
+        ${warningOverlayHtml}
         <div class="vehicleTile__top">
           <div class="vehicleIcon" aria-hidden="true">${svgIcon(style)}</div>
           <div class="vehicleMeta">
@@ -380,6 +374,17 @@
         </div>
       `;
 
+      // 警告オーバーレイの確認ボタン
+      const warningOverlay = tile.querySelector('.vehicleWarningOverlay');
+      if (warningOverlay) {
+        const confirmBtn = warningOverlay.querySelector('.vehicleWarningOverlay__btn');
+        confirmBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          S.confirmedVehicles.add(vehicle.vehicle_id);
+          warningOverlay.remove();
+        });
+      }
+
       const fullBtn = tile.querySelector('[data-slot="FULL"]');
       fullBtn.addEventListener('click', () => openDetailModal(vehicle, full));
 
@@ -388,6 +393,7 @@
 
     // 通常のAM/PM表示
     tile.innerHTML = `
+      ${warningOverlayHtml}
       <div class="vehicleTile__top">
         <div class="vehicleIcon" aria-hidden="true">${svgIcon(style)}</div>
         <div class="vehicleMeta">
@@ -401,6 +407,17 @@
         ${slotHtml(pm)}
       </div>
     `;
+
+    // 警告オーバーレイの確認ボタン
+    const warningOverlay = tile.querySelector('.vehicleWarningOverlay');
+    if (warningOverlay) {
+      const confirmBtn = warningOverlay.querySelector('.vehicleWarningOverlay__btn');
+      confirmBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        S.confirmedVehicles.add(vehicle.vehicle_id);
+        warningOverlay.remove();
+      });
+    }
 
     // bind buttons
     const amBtn = tile.querySelector('[data-slot="AM"]');
