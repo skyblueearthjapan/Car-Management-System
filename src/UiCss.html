@@ -226,6 +226,29 @@ body.app{
   padding: 6px 8px;
 }
 
+/* 空き時間スロット */
+.availableSlots{
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.availableSlots__label{
+  font-size: 11px;
+  font-weight: 950;
+  color: var(--muted);
+  letter-spacing: .08em;
+  margin-bottom: 2px;
+}
+.availableSlot{
+  border: 2px dashed rgba(18, 180, 120, .4);
+  background: rgba(18, 180, 120, .08);
+}
+.availableSlot:hover{
+  border-color: rgba(18, 180, 120, .6);
+  background: rgba(18, 180, 120, .15);
+}
+
 .borrowPanel{
   position: fixed;
   right: 18px;

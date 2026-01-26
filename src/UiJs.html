@@ -534,6 +534,34 @@
         }
       }
 
+      // 空き時間スロットを計算（部分予約の場合のみ）
+      const availableSlots = [];
+      if (full.start_time && full.end_time && full.start_date === full.end_date) {
+        // 当日の部分予約の場合のみ空き時間を表示
+        if (full.start_time !== '08:00') {
+          availableSlots.push({ start: '08:00', end: full.start_time, label: `08:00–${full.start_time}` });
+        }
+        if (full.end_time !== '18:00') {
+          availableSlots.push({ start: full.end_time, end: '18:00', label: `${full.end_time}–18:00` });
+        }
+      }
+
+      const availableSlotsHtml = availableSlots.length > 0 ? `
+        <div class="availableSlots">
+          <div class="availableSlots__label">空き時間（予約可能）</div>
+          ${availableSlots.map((slot, idx) => `
+            <button class="slot slot--ok availableSlot" data-available-idx="${idx}" data-start="${slot.start}" data-end="${slot.end}">
+              <div class="slot__head">
+                <div class="slot__label">空き</div>
+                <div class="slot__badge">予約可</div>
+              </div>
+              <div class="slot__title">予約できます</div>
+              <div class="slot__time">${escapeHtml(slot.label)}</div>
+            </button>
+          `).join('')}
+        </div>
+      ` : '';
+
       tile.innerHTML = `
         ${warningOverlayHtml}
         <div class="vehicleTile__top">
@@ -552,6 +580,7 @@
             <div class="slotFull__time">${escapeHtml(fullTimeDisplay)}</div>
             ${full.memo ? `<div class="slotFull__memo">📍 ${escapeHtml(full.memo)}</div>` : ''}
           </button>
+          ${availableSlotsHtml}
         </div>
       `;
 
@@ -568,6 +597,16 @@
 
       const fullBtn = tile.querySelector('[data-slot="FULL"]');
       fullBtn.addEventListener('click', () => openDetailModal(vehicle, full));
+
+      // 空き時間スロットのクリックイベント
+      const availableBtns = tile.querySelectorAll('.availableSlot');
+      availableBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const startTime = btn.dataset.start;
+          const endTime = btn.dataset.end;
+          openCreateModalWithTime(vehicle, startTime, endTime);
+        });
+      });
 
       return tile;
     }
@@ -657,7 +696,20 @@
   // ---------------------------
   // Create reservation modal
   // ---------------------------
-  function openCreateModal(vehicle, slot){
+  function openCreateModalWithTime(vehicle, startTime, endTime) {
+    // 時間から適切なスロットを決定
+    const startMin = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
+    const endMin = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
+    const boundary = 13 * 60; // 13:00
+
+    let slot = 'FULL';
+    if (startMin < boundary && endMin <= boundary) slot = 'AM';
+    else if (startMin >= boundary && endMin > boundary) slot = 'PM';
+
+    openCreateModal(vehicle, slot, startTime, endTime);
+  }
+
+  function openCreateModal(vehicle, slot, presetStartTime, presetEndTime){
     const deptOptions = S.deptList.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
 
     const bodyHtml = `
@@ -721,8 +773,9 @@
     // State for this modal
     let selectedSlot = slot;
     let selectedWorker = null;
-    let selectedStartTime = slot === 'AM' ? '08:00' : (slot === 'PM' ? '13:00' : '08:00');
-    let selectedEndTime = slot === 'AM' ? '13:00' : (slot === 'PM' ? '18:00' : '18:00');
+    // プリセット時間があればそれを使用、なければスロットのデフォルト
+    let selectedStartTime = presetStartTime || (slot === 'AM' ? '08:00' : (slot === 'PM' ? '13:00' : '08:00'));
+    let selectedEndTime = presetEndTime || (slot === 'AM' ? '13:00' : (slot === 'PM' ? '18:00' : '18:00'));
 
     // Timeline setup - 30分刻み、08:00-18:00
     const TIMELINE_START = 8; // 08:00
