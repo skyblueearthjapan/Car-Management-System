@@ -209,14 +209,24 @@ function createReservationCore_(payload) {
   });
 
   // 日別明細（全日同一slot）
-  // ※ReservationDaysに vehicle_id 列が無い想定。あるなら入れてもOK。
+  const slotTimes = CONFIG.SLOT[slot] || { start: '', end: '' };
   dates.forEach(dateISO => {
+    const effStart = startTime || slotTimes.start || '';
+    const effEnd = endTime || slotTimes.end || '';
+    const conflictKey = `${vehicleId}|${dateISO}`;
+
     appendObject_(CONFIG.SHEETS.RES_DAYS, {
       reservation_id: reservationId,
+      vehicle_id: vehicleId,
       date: dateISO,
       slot: slot,
       start_time: startTime || '',
       end_time: endTime || '',
+      effective_start: effStart,
+      effective_end: effEnd,
+      conflict_key: conflictKey,
+      created_at: ts,
+      updated_at: ts,
     });
   });
 

@@ -1,7 +1,6 @@
 /** Code.gs */
 
 function doGet() {
-  // UIは後で実装。まずは最低限。
   const t = HtmlService.createTemplateFromFile('Ui');
   return t.evaluate()
     .setTitle('車両予約')
@@ -18,7 +17,18 @@ function getInit(dateISO) {
   dateISO = dateISO || toISODate_(new Date());
   const vehicles = getActiveVehicles_();
   const dayReservations = getDayReservationsJoined_(dateISO);
-  const deptList = readAllObjects_(CONFIG.SHEETS.DEPT).slice(0).map(r => r['部署'] || r['dept_name'] || r['name']).filter(Boolean);
+
+  // DeptMaster はヘッダーなしなので専用関数を使う
+  const deptRows = readDeptMaster_();
+  const deptList = deptRows
+    .filter(r => {
+      // is_active チェック (1, '1', true, 'TRUE' を許容)
+      const active = r.is_active;
+      if (active === undefined || active === '') return true;
+      return active === 1 || active === '1' || active === true || String(active).toUpperCase() === 'TRUE';
+    })
+    .map(r => r.dept_name)
+    .filter(Boolean);
 
   return ok({ date: dateISO, vehicles, dayReservations, deptList });
 }
@@ -33,25 +43,22 @@ function getDay(dateISO) {
 /** API: 部署で作業員絞り込み */
 function getWorkersByDept(deptName) {
   if (!deptName) return fail('BAD_REQUEST', 'deptName is required');
-  const workers = readAllObjects_(CONFIG.SHEETS.WORKER);
 
-  // 列名ゆらぎ吸収（テンプレに合わせて必要に応じて調整）
+  // WorkerMaster はヘッダーなしなので専用関数を使う
+  const workers = readWorkerMaster_();
+
   const out = workers
-    .filter(w => {
-      const wDept = String(w['部署'] || w['dept'] || w['dept_name'] || '');
-      return wDept === String(deptName);
-    })
+    .filter(w => String(w.dept_name) === String(deptName))
     .filter(w => {
       // is_active チェック (1, '1', true, 'TRUE' を許容)
-      const active = w['is_active'];
-      if (active === undefined || active === '') return true; // 列が無い場合はOK
+      const active = w.is_active;
+      if (active === undefined || active === '') return true;
       return active === 1 || active === '1' || active === true || String(active).toUpperCase() === 'TRUE';
     })
     .map(w => ({
-      worker_code: w['作業員コード'] || w['worker_code'] || '',
-      worker_name: w['氏名'] || w['worker_name'] || w['name'] || '',
-      dept_name: deptName,
-      role: w['担当業務'] || w['role'] || '',
+      worker_code: w.worker_code,
+      worker_name: w.worker_name,
+      dept_name: w.dept_name,
     }))
     .filter(w => w.worker_code && w.worker_name);
 
@@ -103,7 +110,7 @@ function processQueue(batchSize) {
 }
 
 // ===========================================
-// セットアップ関数
+// セットアップ・デバッグ関数
 // ===========================================
 
 /**
@@ -112,30 +119,56 @@ function processQueue(batchSize) {
 function checkSetup() {
   console.log('CONFIG.DB_SPREADSHEET_ID: ' + CONFIG.DB_SPREADSHEET_ID);
 
-  // DBスプレッドシートの接続確認
   try {
     const ss = db_();
     console.log('DBスプレッドシート接続OK: ' + ss.getName());
-
-    // シート一覧
     const sheets = ss.getSheets().map(s => s.getName());
     console.log('シート一覧: ' + sheets.join(', '));
-
   } catch (e) {
     console.log('DBスプレッドシート接続エラー: ' + e.message);
   }
+}
+
+/**
+ * getInit のテスト
+ */
+function testGetInit() {
+  const result = getInit();
+  console.log(JSON.stringify(result, null, 2));
+}
+
+/**
+ * 車両データのテスト
+ */
+function testVehicles() {
+  const vehicles = getActiveVehicles_();
+  console.log('車両数: ' + vehicles.length);
+  console.log(JSON.stringify(vehicles, null, 2));
+}
+
+/**
+ * 部署データのテスト
+ */
+function testDepts() {
+  const depts = readDeptMaster_();
+  console.log('部署数: ' + depts.length);
+  console.log(JSON.stringify(depts, null, 2));
+}
+
+/**
+ * 作業員データのテスト
+ */
+function testWorkers() {
+  const workers = readWorkerMaster_();
+  console.log('作業員数: ' + workers.length);
+  console.log(JSON.stringify(workers.slice(0, 5), null, 2));
 }
 
 // ===========================================
 // トリガー設定
 // ===========================================
 
-/**
- * マスタ同期の時間主導トリガーを設定
- * ※初回セットアップ時に手動実行
- */
 function setupSyncTrigger() {
-  // 既存のトリガーを削除
   const triggers = ScriptApp.getProjectTriggers();
   for (const trigger of triggers) {
     if (trigger.getHandlerFunction() === 'syncMasters') {
@@ -143,7 +176,6 @@ function setupSyncTrigger() {
     }
   }
 
-  // 毎日午前6時に実行するトリガーを作成
   ScriptApp.newTrigger('syncMasters')
     .timeBased()
     .everyDays(1)
@@ -153,9 +185,6 @@ function setupSyncTrigger() {
   console.log('マスタ同期トリガーを設定しました（毎日 06:00）');
 }
 
-/**
- * トリガー一覧を表示
- */
 function listTriggers() {
   const triggers = ScriptApp.getProjectTriggers();
   console.log('設定済みトリガー:');
