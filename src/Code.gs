@@ -14,30 +14,42 @@ function include(filename) {
 
 /** API: 初期データ */
 function getInit(dateISO) {
-  dateISO = dateISO || toISODate_(new Date());
-  const vehicles = getActiveVehicles_();
-  const dayReservations = getDayReservationsJoined_(dateISO);
+  try {
+    dateISO = dateISO || toISODate_(new Date());
+    const vehicles = getActiveVehicles_();
+    const dayReservations = getDayReservationsJoined_(dateISO);
 
-  // DeptMaster はヘッダーなしなので専用関数を使う
-  const deptRows = readDeptMaster_();
-  const deptList = deptRows
-    .filter(r => {
-      // is_active チェック (1, '1', true, 'TRUE' を許容)
-      const active = r.is_active;
-      if (active === undefined || active === '') return true;
-      return active === 1 || active === '1' || active === true || String(active).toUpperCase() === 'TRUE';
-    })
-    .map(r => r.dept_name)
-    .filter(Boolean);
+    // DeptMaster はヘッダーなしなので専用関数を使う
+    const deptRows = readDeptMaster_();
+    const deptList = deptRows
+      .filter(r => {
+        // is_active チェック (1, '1', true, 'TRUE' を許容)
+        const active = r.is_active;
+        if (active === undefined || active === '') return true;
+        return active === 1 || active === '1' || active === true || String(active).toUpperCase() === 'TRUE';
+      })
+      .map(r => r.dept_name)
+      .filter(Boolean);
 
-  return ok({ date: dateISO, vehicles, dayReservations, deptList });
+    // JSON.parse/stringifyで確実にシリアライズ可能にする（Date型などを文字列化）
+    const result = { date: dateISO, vehicles, dayReservations, deptList };
+    return ok(JSON.parse(JSON.stringify(result)));
+  } catch (e) {
+    return fail('ERROR', e.message || String(e));
+  }
 }
 
 /** API: 指定日の予約 */
 function getDay(dateISO) {
-  if (!dateISO) return fail('BAD_REQUEST', 'dateISO is required');
-  const dayReservations = getDayReservationsJoined_(dateISO);
-  return ok({ date: dateISO, dayReservations });
+  try {
+    if (!dateISO) return fail('BAD_REQUEST', 'dateISO is required');
+    const dayReservations = getDayReservationsJoined_(dateISO);
+    // JSON.parse/stringifyで確実にシリアライズ可能にする
+    const result = { date: dateISO, dayReservations };
+    return ok(JSON.parse(JSON.stringify(result)));
+  } catch (e) {
+    return fail('ERROR', e.message || String(e));
+  }
 }
 
 /** API: 部署で作業員絞り込み */
