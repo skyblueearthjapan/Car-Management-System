@@ -7,29 +7,29 @@
   </head>
   <body class="app">
     <header class="topbar">
-      <div class="brand">
-        <div class="logo">LINE WORKS</div>
-        <div class="subtitle">車両予約</div>
-      </div>
-
-      <nav class="weekTabs" aria-label="週タブ" id="weekTabs"></nav>
-
-      <div class="topActions">
-        <div class="saveState is-saved" id="saveState">保存済み</div>
-        <div class="navBtns">
-          <button class="btn" id="btnPrev">前日</button>
-          <button class="btn btn--primary" id="btnToday">今日</button>
-          <button class="btn" id="btnNext">翌日</button>
+      <div class="topbar-inner">
+        <div class="brand">
+          <span class="logo">LINE WORKS</span>
+          <span class="subtitle">車両予約</span>
         </div>
+        <nav class="weekTabs" aria-label="週タブ" id="weekTabs"></nav>
         <a href="<?= PORTAL_URL ?>" target="_top" class="portal-link">社内ポータルへ移動</a>
       </div>
     </header>
 
     <main class="canvas">
       <section class="owned">
-        <div class="dateTitle">
-          <div class="dateTitle__main" id="dateTitleMain">—</div>
-          <div class="dateTitle__sub">AM 08:00–13:00 / PM 13:00–18:00</div>
+        <div class="dayInfo">
+          <div class="dateTitle">
+            <div class="dateTitle__main" id="dateTitleMain">—</div>
+            <div class="dateTitle__sub">AM 08:00–13:00 / PM 13:00–18:00</div>
+          </div>
+          <div class="dayNav">
+            <div class="saveState is-saved" id="saveState">保存済み</div>
+            <button class="navBtn" id="btnPrev">&#9664; 前日</button>
+            <button class="navBtn navBtn--today" id="btnToday">今日</button>
+            <button class="navBtn" id="btnNext">翌日 &#9654;</button>
+          </div>
         </div>
 
         <div class="grid" id="ownedGrid"></div>
