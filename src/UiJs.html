@@ -6,6 +6,7 @@
   // ---------------------------
   const S = {
     dateISO: null,
+    todayISO: null,
     vehicles: [],
     dayReservations: [],
     deptList: [],
@@ -453,7 +454,7 @@
     const host = $('weekTabs');
     host.innerHTML = '';
 
-    const weekStart = startOfWeekISO(S.dateISO);
+    const weekStart = S.todayISO; // 今日から7日間（会議室予約と同じ）
     for (let i=0;i<7;i++){
       const iso = addDaysISO(weekStart, i);
       const dt = isoToDate(iso);
@@ -1387,6 +1388,7 @@
         return;
       }
       const data = res.data;
+      S.todayISO = dateToISO(new Date());
       S.dateISO = data.date;
       S.vehicles = data.vehicles || [];
       S.dayReservations = data.dayReservations || [];
