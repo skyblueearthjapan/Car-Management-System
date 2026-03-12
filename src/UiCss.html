@@ -39,21 +39,26 @@ body.app{
 .topbar{
   position: sticky; top:0;
   z-index: 50;
-  background: rgba(255,255,255,.86);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--hair);
+  background: #244a73;
+  color: #fff;
   padding: 12px 16px;
   display:flex; align-items:center; gap: 16px;
 }
 
 .brand{ min-width: 160px; }
-.brand .logo{ font-weight: 950; letter-spacing:.08em; font-size: 13px; }
-.brand .subtitle{ font-size: 12px; color: var(--muted); margin-top:2px; }
+.brand .logo{
+  font-family: 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 900;
+  letter-spacing:.02em;
+  font-size: 20px;
+  color: #fff;
+}
+.brand .subtitle{ font-size: 14px; color: rgba(255,255,255,.85); margin-top:2px; font-weight: 600; }
 
 .weekTabs{ display:flex; gap:8px; flex:1; justify-content:center; overflow:auto; padding:2px 0; }
 .dayTab{
-  border: 1px solid var(--hair);
-  background: #fff;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.12);
   border-radius: 14px;
   padding: 8px 10px;
   min-width: 66px;
@@ -61,22 +66,25 @@ body.app{
   cursor:pointer;
   user-select:none;
   transition: all .15s ease;
+  color: #fff;
 }
 .dayTab:hover{
-  background: rgba(11,18,32,.04);
-  border-color: rgba(11,18,32,.16);
+  background: rgba(255,255,255,.22);
+  border-color: rgba(255,255,255,.35);
   transform: translateY(-1px);
 }
 .dayTab.is-active{
-  background: rgba(18, 120, 220, .12);
-  border-color: rgba(18, 120, 220, .35);
-  box-shadow: 0 4px 12px rgba(18, 120, 220, .15);
+  background: rgba(255,255,255,.92);
+  border-color: rgba(255,255,255,.95);
+  color: #244a73;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
 }
 .dayTab.is-active:hover{
-  background: rgba(18, 120, 220, .18);
+  background: #fff;
 }
 .dayTab__date{ font-weight: 950; font-size: 14px; }
-.dayTab__dow{ font-size: 11px; color: var(--muted); }
+.dayTab__dow{ font-size: 11px; color: rgba(255,255,255,.7); }
+.dayTab.is-active .dayTab__dow{ color: rgba(36,74,115,.6); }
 .dayTab__badge{
   justify-self:end;
   font-size: 11px; font-weight: 950;
@@ -90,25 +98,57 @@ body.app{
   font-size: 12px; font-weight: 950;
   padding: 6px 10px;
   border-radius: 999px;
-  border: 1px solid var(--hair);
-  background:#fff;
-  color: var(--muted);
+  border: 1px solid rgba(255,255,255,.3);
+  background: rgba(76,175,80,.2);
+  color: #c8e6c9;
   white-space:nowrap;
 }
-.saveState.is-saving{ color: var(--ink); }
-.saveState.is-saved{ color: var(--muted); }
+.saveState.is-saving{
+  background: rgba(33,150,243,.2);
+  color: #bbdefb;
+  border-color: rgba(33,150,243,.3);
+}
+.saveState.is-saved{
+  background: rgba(76,175,80,.2);
+  color: #c8e6c9;
+  border-color: rgba(76,175,80,.3);
+}
+
+.portal-link{
+  display: inline-block;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #1f9d55;
+  background: #1f9d55;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.portal-link:hover{
+  background: #177a43;
+  border-color: #177a43;
+  color: #fff;
+  text-decoration: none;
+}
 
 .btn{
-  border: 1px solid var(--hair);
-  background:#fff;
+  border: 1px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.2);
+  color: #fff;
   border-radius: 999px;
   padding: 8px 12px;
   font-weight: 950;
   cursor:pointer;
 }
+.btn:hover:not(:disabled){
+  background: rgba(255,255,255,.3);
+}
 .btn--primary{
-  border-color: rgba(11,18,32,.18);
-  box-shadow: var(--shadow);
+  background: rgba(255,255,255,.25);
+  border-color: rgba(255,255,255,.4);
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
 }
 
 .canvas{
