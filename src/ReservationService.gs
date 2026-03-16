@@ -36,6 +36,7 @@ function getDayReservationsJoined_(dateISO) {
         memo: h.memo || '',
         start_date: normalizeToISO_(h.start_date),  // 予約開始日
         end_date: normalizeToISO_(h.end_date),      // 予約終了日
+        source_system: h.source_system || 'webapp',  // 予約元システム
       };
     })
     .filter(Boolean);
@@ -75,6 +76,7 @@ function buildConflicts_(vehicleId, dateISO, slot, timeRangeOrNull, existingRows
         existing_dept: ex.dept_name,
         existing_name: ex.worker_name,
         existing_time_range: (ex.start_time && ex.end_time) ? `${ex.start_time}–${ex.end_time}` : exSlot,
+        source_system: ex.source_system || 'webapp',
       });
       continue;
     }
@@ -93,6 +95,7 @@ function buildConflicts_(vehicleId, dateISO, slot, timeRangeOrNull, existingRows
         existing_dept: ex.dept_name,
         existing_name: ex.worker_name,
         existing_time_range: (ex.start_time && ex.end_time) ? `${ex.start_time}–${ex.end_time}` : exSlot,
+        source_system: ex.source_system || 'webapp',
       });
       continue;
     }
@@ -107,6 +110,7 @@ function buildConflicts_(vehicleId, dateISO, slot, timeRangeOrNull, existingRows
         existing_dept: ex.dept_name,
         existing_name: ex.worker_name,
         existing_time_range: `${ex.start_time}–${ex.end_time}`,
+        source_system: ex.source_system || 'webapp',
       });
     }
   }
@@ -156,6 +160,7 @@ function getDayReservationsJoinedBulkByVehicleAndDates_(vehicleId, dates) {
       dept_name: h.dept_name,
       worker_name: h.worker_name,
       worker_code: h.worker_code,
+      source_system: h.source_system || 'webapp',
     };
     if (!map.has(String(d.date))) map.set(String(d.date), []);
     map.get(String(d.date)).push(row);
@@ -183,6 +188,10 @@ function createReservationCore_(payload) {
   // 競合チェック
   const conflicts = checkConflictsForCreate_(vehicleId, dates, slot, startTime, endTime);
   if (conflicts.length) {
+    // 出張計画（生産工程表）由来の予約との競合は専用メッセージ
+    if (conflicts.some(c => c.source_system === 'seisan')) {
+      return fail('CONFLICT', '出張計画で確保済みの車両です。別の車両を選択してください。', { conflicts });
+    }
     return fail('CONFLICT', '既に予約があります。', { conflicts });
   }
 
@@ -282,6 +291,13 @@ function createReservationCore_(payload) {
 }
 
 function cancelReservationCore_(reservationId) {
+  // 出張計画（生産工程表）由来の予約は車両管理アプリから取消不可
+  const headers = readAllObjects_(CONFIG.SHEETS.RESERVATIONS);
+  const target = headers.find(h => String(h.reservation_id) === String(reservationId));
+  if (target && String(target.source_system) === 'seisan') {
+    return fail('FORBIDDEN', 'この予約は生産工程表の出張計画で管理されています。取消は生産工程表から行ってください。');
+  }
+
   const actor = Session.getActiveUser().getEmail() || 'unknown';
   const ts = nowIso_();
   const updated = updateRowsByKey_(CONFIG.SHEETS.RESERVATIONS, 'reservation_id', reservationId, {

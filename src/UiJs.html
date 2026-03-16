@@ -378,11 +378,12 @@
       const hasCustomTime = normalizeTimeStr(fullRow.start_time) && normalizeTimeStr(fullRow.end_time);
       const isFullDay = !hasCustomTime || (normalizeTimeStr(fullRow.start_time) === '08:00' && normalizeTimeStr(fullRow.end_time) === '18:00');
 
+      const isSeisan = String(fullRow.source_system || '') === 'seisan';
       const fullState = {
         slot: 'FULL',
         status: 'ng',
-        badge: isFullDay ? '終日使用中' : '時間帯使用中',
-        title: isFullDay ? '終日使用の為、予約できません' : `${timeDisplay} 使用中`,
+        badge: isSeisan ? '出張計画確保' : (isFullDay ? '終日使用中' : '時間帯使用中'),
+        title: isSeisan ? '出張計画で確保済み' : (isFullDay ? '終日使用の為、予約できません' : `${timeDisplay} 使用中`),
         user,
         time: timeDisplay,
         start_time: normalizeTimeStr(fullRow.start_time) || '',
@@ -395,6 +396,7 @@
         memo: fullRow.memo || '',
         start_date: fullRow.start_date || fullRow.date || S.dateISO,
         end_date: fullRow.end_date || fullRow.date || S.dateISO,
+        source_system: fullRow.source_system || 'webapp',
       };
       return { am: null, pm: null, full: fullState };
     }
@@ -402,9 +404,12 @@
     // AM/PM
     const amRow = rows.find(r => String(r.slot) === 'AM');
     if (amRow){
+      const isSeisanAM = String(amRow.source_system || '') === 'seisan';
       am = {
         ...am,
-        status:'ng', badge:'使用中', title:'使えません（予約あり）',
+        status:'ng',
+        badge: isSeisanAM ? '出張計画確保' : '使用中',
+        title: isSeisanAM ? '出張計画で確保済み' : '使えません（予約あり）',
         user: `${amRow.dept_name}　${amRow.worker_name}`,
         time: getTimeDisplay(amRow, SLOT_TIME['AM']),
         start_time: normalizeTimeStr(amRow.start_time) || '',
@@ -416,13 +421,17 @@
         memo: amRow.memo || '',
         start_date: amRow.start_date || amRow.date || S.dateISO,
         end_date: amRow.end_date || amRow.date || S.dateISO,
+        source_system: amRow.source_system || 'webapp',
       };
     }
     const pmRow = rows.find(r => String(r.slot) === 'PM');
     if (pmRow){
+      const isSeisanPM = String(pmRow.source_system || '') === 'seisan';
       pm = {
         ...pm,
-        status:'ng', badge:'使用中', title:'使えません（予約あり）',
+        status:'ng',
+        badge: isSeisanPM ? '出張計画確保' : '使用中',
+        title: isSeisanPM ? '出張計画で確保済み' : '使えません（予約あり）',
         user: `${pmRow.dept_name}　${pmRow.worker_name}`,
         time: getTimeDisplay(pmRow, SLOT_TIME['PM']),
         start_time: normalizeTimeStr(pmRow.start_time) || '',
@@ -434,6 +443,7 @@
         memo: pmRow.memo || '',
         start_date: pmRow.start_date || pmRow.date || S.dateISO,
         end_date: pmRow.end_date || pmRow.date || S.dateISO,
+        source_system: pmRow.source_system || 'webapp',
       };
     }
 
@@ -574,7 +584,7 @@
         </div>
 
         <div class="slots">
-          <button class="slotFull" data-slot="FULL">
+          <button class="slotFull${String(full.source_system || '') === 'seisan' ? ' slotFull--seisan' : ''}" data-slot="FULL">
             <div class="slotFull__badge">${escapeHtml(full.badge)}</div>
             <div class="slotFull__title">${escapeHtml(full.title)}</div>
             <div class="slotFull__user">${escapeHtml(full.user)}</div>
@@ -651,7 +661,10 @@
   }
 
   function slotHtml(s){
-    const cls = s.status === 'ng' ? 'slot slot--ng' : 'slot slot--ok';
+    const isSeisan = String(s.source_system || '') === 'seisan';
+    const cls = s.status === 'ng'
+      ? (isSeisan ? 'slot slot--ng slot--seisan' : 'slot slot--ng')
+      : 'slot slot--ok';
     const userLine = s.user ? `<div class="slot__user">${escapeHtml(s.user)}</div>` : '';
     const detailLine = s.detail ? `<div class="slot__detail">${escapeHtml(s.detail)}</div>` : '';
     const memoLine = s.memo ? `<div class="slot__memo">📍 ${escapeHtml(s.memo)}</div>` : '';
@@ -1230,12 +1243,25 @@
         <div class="detailValue">${escapeHtml(slotState.memo)}</div>
       </div>
       ` : ''}
+      ${String(slotState.source_system || '') === 'seisan' ? `
+      <div class="detailRow" style="border:none; padding-top: 16px;">
+        <div class="note" style="background:#f3e8ff; border:1px solid #c4b5fd; border-radius:8px; padding:12px; color:#6d28d9;">
+          <strong>出張計画確保</strong><br>
+          この予約は生産工程表の出張計画で管理されています。<br>
+          変更・取消は生産工程表から行ってください。
+        </div>
+      </div>
+      ` : `
       <div class="detailRow" style="border:none; padding-top: 16px;">
         <div class="note">この予約を取り消す場合は「予約取消」を押してください。</div>
       </div>
+      `}
     `;
 
-    const footHtml = `
+    const isSeisanReservation = String(slotState.source_system || '') === 'seisan';
+    const footHtml = isSeisanReservation ? `
+      <button class="btn" id="closeDetailBtn">閉じる</button>
+    ` : `
       <button class="btn" id="closeDetailBtn">閉じる</button>
       <button class="btn btn--danger" id="cancelReservationBtn">予約取消</button>
     `;
@@ -1243,6 +1269,9 @@
     openModal(`予約詳細：${vehicle.name}`, bodyHtml, footHtml);
 
     $('closeDetailBtn').addEventListener('click', closeModal);
+
+    // 出張計画確保の予約は取消ボタンなし
+    if (!$('cancelReservationBtn')) return;
 
     // 楽観的UI更新で即座に取消を反映
     $('cancelReservationBtn').addEventListener('click', async () => {
