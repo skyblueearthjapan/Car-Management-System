@@ -65,12 +65,6 @@ function getWorkersByDept(deptName) {
 
   const out = workers
     .filter(w => String(w.dept_name) === String(deptName))
-    .filter(w => {
-      // is_active チェック (1, '1', true, 'TRUE' を許容)
-      const active = w.is_active;
-      if (active === undefined || active === '') return true;
-      return active === 1 || active === '1' || active === true || String(active).toUpperCase() === 'TRUE';
-    })
     .map(w => ({
       worker_code: w.worker_code,
       worker_name: w.worker_name,

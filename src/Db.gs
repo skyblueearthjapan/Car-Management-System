@@ -93,9 +93,10 @@ function readWorkerMaster_() {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
 
-  // 1行目はタイトル、2行目からデータ
-  // A=worker_code, B=worker_name, C=dept_name, D=display_order, E=is_active, F=created_at, G=updated_at
-  const data = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
+  // 1行目は結合セルのタイトル（「作業員コード」）、2行目からデータ
+  // A=worker_code, B=worker_name, C=dept_name, D=location, E=office
+  const lastCol = Math.max(sheet.getLastColumn(), 5);
+  const data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
 
   return data
     .filter(row => row[0]) // worker_code が空でない
@@ -103,10 +104,8 @@ function readWorkerMaster_() {
       worker_code: String(row[0] || ''),
       worker_name: String(row[1] || ''),
       dept_name: String(row[2] || ''),
-      display_order: row[3],
-      is_active: row[4],
-      created_at: row[5],
-      updated_at: row[6],
+      location: String(row[3] || ''),
+      office: String(row[4] || ''),
     }));
 }
 
