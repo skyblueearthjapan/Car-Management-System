@@ -63,8 +63,11 @@ function getWorkersByDept(deptName) {
   // WorkerMaster はヘッダーなしなので専用関数を使う
   const workers = readWorkerMaster_();
 
+  // 部署グループに該当する場合は複数部署で検索
+  const deptNames = CONFIG.DEPT_GROUPS[deptName] || [deptName];
+
   const out = workers
-    .filter(w => String(w.dept_name) === String(deptName))
+    .filter(w => deptNames.includes(String(w.dept_name)))
     .map(w => ({
       worker_code: w.worker_code,
       worker_name: w.worker_name,
