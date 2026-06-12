@@ -1273,10 +1273,8 @@
     // 出張計画確保の予約は取消ボタンなし
     if (!$('cancelReservationBtn')) return;
 
-    // 楽観的UI更新で即座に取消を反映
-    $('cancelReservationBtn').addEventListener('click', async () => {
-      if (!confirm('この予約を取り消しますか？')) return;
-
+    // 楽観的UI更新で即座に取消を反映（実処理）
+    const doCancelReservation = async () => {
       const reservationId = slotState.reservation_id;
 
       // 楽観的更新: 即座にUIから削除
@@ -1310,7 +1308,28 @@
       } finally {
         setSaveState('saved');
       }
-    });
+    };
+
+    // 標準の confirm() は GAS のサンドボックス内では無効化されるため、
+    // フッターをアプリ内の確認UIに切り替えて取消を確定する
+    function bindCancelBtn() {
+      $('cancelReservationBtn').addEventListener('click', () => {
+        const foot = $('modalFoot');
+        foot.innerHTML = `
+          <span style="margin-right:auto; font-weight:850; color:#dc2626;">本当に取り消しますか？</span>
+          <button class="btn" id="cancelAbortBtn">やめる</button>
+          <button class="btn btn--danger" id="cancelConfirmBtn">取消する</button>
+        `;
+        $('cancelAbortBtn').addEventListener('click', () => {
+          // 元のフッターに戻す
+          foot.innerHTML = footHtml;
+          $('closeDetailBtn').addEventListener('click', closeModal);
+          bindCancelBtn();
+        });
+        $('cancelConfirmBtn').addEventListener('click', doCancelReservation);
+      });
+    }
+    bindCancelBtn();
   }
 
   // ---------------------------
