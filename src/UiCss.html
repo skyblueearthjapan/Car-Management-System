@@ -520,6 +520,8 @@ body.app{
 .modal{
   width: 720px;
   max-width: calc(100vw - 36px);
+  max-height: calc(100vh - 36px);
+  display:flex; flex-direction:column;
   background: rgba(255,255,255,.96);
   backdrop-filter: blur(12px);
   border: 1px solid var(--hair);
@@ -531,6 +533,7 @@ body.app{
   padding: 16px 16px 10px;
   display:flex; align-items:center; justify-content:space-between;
   border-bottom: 1px solid var(--hair);
+  flex-shrink:0;
 }
 .modal__title{ font-weight: 950; font-size: 16px; }
 .iconBtn{
@@ -541,11 +544,12 @@ body.app{
   font-weight: 950;
   cursor:pointer;
 }
-.modal__body{ padding: 16px; }
+.modal__body{ padding: 16px; overflow-y:auto; flex:1 1 auto; min-height:0; }
 .modal__foot{
   padding: 12px 16px 16px;
   display:flex; justify-content:flex-end; gap: 10px;
   border-top: 1px solid var(--hair);
+  flex-shrink:0;
 }
 
 .form{
@@ -718,5 +722,12 @@ body.app{
   .form{ grid-template-columns: 1fr; }
   .borrowPanel{ width: 360px; }
   .borrowPanel__grid{ grid-template-columns: 1fr; }
+}
+@media (max-height: 760px){
+  .modal__head{ padding: 10px 14px 8px; }
+  .modal__body{ padding: 12px 14px; }
+  .modal__foot{ padding: 8px 14px 12px; }
+  .form{ gap: 10px; }
+  .field{ gap: 4px; }
 }
 </style>
