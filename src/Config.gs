@@ -19,6 +19,9 @@ const CONFIG = {
     '業務': ['総務部', '生産管理', '資材・購買', '品質管理', '在庫管理'],
   },
 
+  // 部署プルダウンに表示しない部署
+  EXCLUDED_DEPTS: ['Administrator'],
+
   // 固定ルール
   SLOT: {
     AM: { start: '08:00', end: '13:00' },

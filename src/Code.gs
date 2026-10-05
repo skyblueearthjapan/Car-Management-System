@@ -40,8 +40,12 @@ function getInit(dateISO) {
       }
     });
 
+    // 予約で選ぶ必要のない部署は除外
+    const excluded = new Set(CONFIG.EXCLUDED_DEPTS || []);
+    const visibleDeptList = deptList.filter(d => !excluded.has(d));
+
     // JSON.parse/stringifyで確実にシリアライズ可能にする（Date型などを文字列化）
-    const result = { date: dateISO, vehicles, dayReservations, deptList };
+    const result = { date: dateISO, vehicles, dayReservations, deptList: visibleDeptList };
     return ok(JSON.parse(JSON.stringify(result)));
   } catch (e) {
     return fail('ERROR', e.message || String(e));
