@@ -24,16 +24,21 @@ function getInit(dateISO) {
     const dayReservations = getDayReservationsJoined_(dateISO);
 
     // DeptMaster はヘッダーなしなので専用関数を使う
-    const deptRows = readDeptMaster_();
-    const deptList = deptRows
-      .filter(r => {
-        // is_active チェック (1, '1', true, 'TRUE' を許容)
-        const active = r.is_active;
-        if (active === undefined || active === '') return true;
-        return active === 1 || active === '1' || active === true || String(active).toUpperCase() === 'TRUE';
-      })
+    // 全部署を対象にする（is_active で絞らない）
+    const deptList = readDeptMaster_()
       .map(r => r.dept_name)
       .filter(Boolean);
+
+    // DeptMaster に無い（グループにも含まれない）WorkerMaster の部署も追加
+    const covered = new Set(deptList);
+    deptList.forEach(d => (CONFIG.DEPT_GROUPS[d] || []).forEach(n => covered.add(n)));
+    readWorkerMaster_().forEach(w => {
+      const d = String(w.dept_name || '');
+      if (d && !covered.has(d)) {
+        deptList.push(d);
+        covered.add(d);
+      }
+    });
 
     // JSON.parse/stringifyで確実にシリアライズ可能にする（Date型などを文字列化）
     const result = { date: dateISO, vehicles, dayReservations, deptList };
